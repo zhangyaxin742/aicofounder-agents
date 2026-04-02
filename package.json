@@ -1,11 +1,13 @@
 {
   "name": "cofounder-swarm",
-  "version": "0.1.0",
+  "version": "1.0.0",
   "private": true,
   "type": "module",
+  "description": "Multi-agent AI cofounder swarm — runs in your terminal",
+  "main": "src/index.ts",
   "scripts": {
     "start": "tsx src/index.ts",
-    "dev": "tsx watch src/index.ts",
+    "dev": "tsx watch src/index.ts", 
     "check": "tsc --noEmit"
   },
   "dependencies": {
@@ -15,7 +17,11 @@
     "tsx": "^4.19.2"
   },
   "devDependencies": {
-    "@types/node": "^22.10.2",
-    "typescript": "^5.7.3"
+    "@types/node": "^20.11.0",
+    "tsx": "^4.7.0",
+    "typescript": "^5.3.3"
+  },
+  "engines": {
+    "node": ">=18.0.0"
   }
 }

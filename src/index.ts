@@ -5,14 +5,17 @@ import { stdin as input, stdout as output } from "node:process";
 import { Orchestrator } from "./orchestrator.js";
 
 async function main(): Promise<void> {
-  const projectSlug = process.env.PROJECT_SLUG ?? "default";
-  const orchestrator = new Orchestrator(projectSlug);
-
-  await orchestrator.init();
-
   const rl = createInterface({ input, output });
+  const projectRef = (process.env.PROJECT_SLUG ?? "").trim()
+    || (await rl.question(chalk.cyan("Project name or slug: "))).trim()
+    || "default";
+  const orchestrator = new Orchestrator(projectRef);
+  const session = await orchestrator.init();
+  const summary = orchestrator.getProjectSummary();
 
-  console.log(chalk.cyan(`cofounder-swarm ready for project "${projectSlug}"`));
+  console.log(chalk.cyan(`cofounder-swarm ready for project "${summary.projectName}"`));
+  console.log(chalk.dim(`Slug: ${summary.projectSlug} | phase: ${summary.phase}`));
+  console.log(chalk.dim(session.created ? "Created new canvas." : "Resumed existing canvas."));
   console.log(chalk.dim("Type your idea, or use /canvas, /export, /rerun, /quit"));
 
   while (true) {

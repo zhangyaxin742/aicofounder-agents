@@ -28,19 +28,6 @@
       9. Critic                                                         
      10. Verifier                                                       
      11. Export Agent
-  - Remove doc-level contradictions before build starts.
-    Fix these in both docs once approved:
-      - Senior Engineer vs Architect + Technical Cofounder
-      - Legal Advisor as standalone vs legal folded into Critic
-      - Synthesizer + Pattern Librarian vs merged Export Agent
-      - Promise.all vs Promise.allSettled
-      - MAX_SESSION_COST=5.00 vs 2.00
-      - project starting in intake vs warmup
-      - “run for free” wording vs paid Anthropic requirement
-  - Do not promise “for free” in README.
-    Replace with “run locally with your own Anthropic API key.” If you
-    want a free mode later, treat it as a separate post-sprint
-    adapter.
 
     ## BUILD SPECS
   - Keep web search constrained.
@@ -67,28 +54,7 @@
   - Defer Pattern Librarian/knowledge base from sprint scope.                                                     
     It adds complexity with little value for day-1 usability. The                                                 
     Export Agent can stay; cross-project pattern extraction should                                                
-    wait.                                                                                                         
-                                                                                                                  
-  ## Doc Edits To Make After Approval                                                                             
-                                                                                                                  
-  - Rewrite both docs into one single source of truth for:                                                        
-      - final agent roster                                                                                        
-      - final phase flow                                                                                          
-      - final tool list                                                                                           
-      - final budget defaults                                                                                     
-      - final export behavior                                                                                     
-  - Rewrite README around the real shipping target:
-      - local CLI                                                                                                 
-      - Anthropic API key required                                                                                
-      - expected cost per full run                                                                                
-      - quickstart                                                                                                
-      - example session                                                                                           
-      - troubleshooting                                                                                           
-  - Remove or soften claims that imply:                                                                           
-      - legal advice quality beyond risk flagging                                                                 
-      - investor-grade certainty from lightweight research                                                        
-      - free usage                                                                                                
-      - complete code already present in repo                                                                     
+    wait.                                                                                                                                                                     
                                                                                                                   
   ## Build Tasks                                                                                                  
                                                                                                                   
