@@ -11,13 +11,14 @@ The sections below contain historical iterations. For the sprint build, this fil
 The authoritative architecture is:
 
 - Final roster only: Orchestrator, Market Scout, Competitor Analyst, Market Sizer, ICP Whisperer, Architect, Technical Cofounder, GTM Specialist, Critic, Verifier, Export Agent
-- `Senior Engineer` references are superseded by `Architect + Technical Cofounder`
-- `Legal Advisor` references are superseded by the `Critic` running an optional legal-risk lens
-- `Synthesizer` references are superseded by the `Export Agent`
-- `Pattern Librarian` references are deferred from sprint scope
-- Research fan-out uses `Promise.allSettled`, not `Promise.all`
+- legacy build-planning labels are superseded by `Architect + Technical Cofounder`
+- legacy legal-review labels are superseded by the `Critic` running an optional legal-risk lens
+- legacy export-synthesis labels are superseded by the `Export Agent`
+- legacy knowledge-extraction labels are deferred from sprint scope
+- Research fan-out uses `Promise.allSettled`
 - `MAX_SESSION_COST=2.00`
 - Projects begin in `warmup`, then move into `intake`
+- The implementation-oriented behavior in `cofounder-codebase.md` is authoritative for the `warmup -> intake` handoff; this architecture doc is aligned to that distinction
 - Web search stays ON only for Scout, Analyst, Sizer, ICP, Architect, and GTM when needed; OFF for Orchestrator, Technical Cofounder, Critic, Verifier, and Export Agent
 - Verifier scope is structural validation, sourcing presence, and hallucination markers; it is not presented as factual truth enforcement
 - This repo is positioned as a paid Anthropic local CLI, not a free runtime
@@ -152,8 +153,8 @@ USER INPUT
          │                        │
    ┌─────┴──────┐            ┌────┴────────────┐
    │ Scout      │            │ ICP Whisperer   │
-   │ Analyst    │            │ Senior Engineer │
-   │ Sizer      │            │ Legal Advisor   │
+   │ Analyst    │            │ Architect + Technical Cofounder │
+   │ Sizer      │            │ Critic legal-risk lens   │
    └─────┬──────┘            │ GTM Specialist  │
          │                   └────┬────────────┘
          ▼                        │
@@ -176,13 +177,20 @@ USER INPUT
 ### Phase-by-Phase Flow
 
 ```
-Phase 0: WARMUP / INTAKE
+Phase -1: WARMUP
 ─────────────────────────────────────────────────────────
 User describes idea (or Orchestrator asks for one)
-Orchestrator asks 3–5 clarifying questions
-No agents invoked yet — pure conversation
-Canvas initialized with: idea summary, founder context,
-  stated assumptions, open questions
+Orchestrator runs Socratic questioning to sharpen a vague idea
+No agents invoked yet — no research fan-out
+Tool access restricted to canvas-only transition support
+Goal: reach a research-ready idea, not fill the structured brief yet
+
+Phase 0: INTAKE
+─────────────────────────────────────────────────────────
+Orchestrator expands the sharpened idea into the structured brief
+Canvas `idea` section written with:
+  summary, founder context, initial assumptions,
+  open questions, value proposition, possible ICP, timestamp
 
 Phase 1: MARKET RESEARCH (Parallel Fan-Out)
 ─────────────────────────────────────────────────────────
@@ -622,7 +630,7 @@ CONFIDENCE LEVEL: [High / Medium / Low] — [reason]
 
 ---
 
-### 4.5 - The Senior Engineer
+### 4.5 - The Architect + Technical Cofounder
 
 > Sprint note: This section is retained as historical build-planning context, but the active sprint roster splits this work between the Architect and the Technical Cofounder.
 
@@ -645,7 +653,7 @@ RESEARCH BEFORE ANSWERING:
 
 OUTPUT FORMAT (return exactly this):
 ---
-SENIOR ENGINEER REPORT
+BUILD PLANNING REPORT
 
 COMPETITOR TECH STACKS (researched):
 [What are competitors built on? What does this reveal?]
@@ -698,7 +706,7 @@ CONFIDENCE LEVEL: [High / Medium / Low]
 
 ---
 
-### 4.6 - The Legal Advisor
+### 4.6 - The Critic legal-risk lens
 
 > Sprint note: This section is retained as historical legal-risk context, but the active sprint roster folds legal review into the Critic via an optional legal-risk lens.
 
@@ -725,7 +733,7 @@ Search for:
 
 OUTPUT FORMAT (return exactly this):
 ---
-LEGAL ADVISOR REPORT
+CRITIC LEGAL-RISK REPORT
 
 ENTITY STRUCTURE RECOMMENDATION:
 [LLC vs C-Corp, Delaware vs. home state, and why for this specific situation]
@@ -1022,7 +1030,10 @@ The canvas is the product's memory. It's injected into every orchestrator turn. 
     "summary": "string",
     "founder_context": "string",
     "initial_assumptions": ["string"],
-    "open_questions": ["string"]
+    "open_questions": ["string"],
+    "value_proposition": "string",
+    "possible_icp": ["string"],
+    "last_updated": "timestamp"
   },
   "research": {
     "pain_signals": [...],
@@ -1147,7 +1158,7 @@ This is built to run entirely on your machine. No hosted backend, no auth layer,
 Runtime:         Node.js 18+ (built-in fetch, no extra deps for HTTP)
 Language:        TypeScript (tsx for zero-config TS execution)
 Agent Runtime:   Anthropic SDK (@anthropic-ai/sdk) — direct API calls
-Parallelism:     Promise.all — native, no framework needed
+Parallelism:     Promise.allSettled — native, no framework needed
 Streaming:       Anthropic streaming API — piped to terminal
 
 Canvas / State:  Local JSON files in /canvas directory
@@ -1283,7 +1294,7 @@ Your existing `/startup-research` skill maps directly onto this architecture. He
 │  → populates: Section 3 (Differentiation, Positioning)  │
 │     via conversation + canvas analysis                   │
 ├─────────────────────────────────────────────────────────┤
-│  SENIOR ENGINEER                                         │
+│  ARCHITECT + TECHNICAL COFOUNDER                         │
 │  → populates: Section 4 (Tech Stack, MVP)               │
 ├─────────────────────────────────────────────────────────┤
 │  GTM SPECIALIST                                          │
@@ -1589,10 +1600,10 @@ Not every agent needs the full canvas. Context isolation is the point — each a
 │ ICP Whisperer        │ Idea + research SUMMARIES + brief        │
 │ (Phase 2)            │ NOT raw reports                          │
 ├──────────────────────┼──────────────────────────────────────────┤
-│ Senior Engineer      │ Idea + research summaries + ICP summary  │
+│ Architect + Technical Cofounder      │ Idea + research summaries + ICP summary  │
 │ (Phase 4)            │ + positioning thesis + brief             │
 ├──────────────────────┼──────────────────────────────────────────┤
-│ Legal Advisor        │ Idea + product summary + build summary   │
+│ Critic legal-risk lens        │ Idea + product summary + build summary   │
 │ (Phase 5)            │ + brief                                  │
 ├──────────────────────┼──────────────────────────────────────────┤
 │ GTM Specialist       │ Full canvas summaries + brief            │
@@ -1727,8 +1738,8 @@ CONTENT FAILURES (agent-level, not API-level):
 │ Analyst              │ 90           │ Heavy web search          │
 │ Sizer                │ 90           │ Heavy web search          │
 │ ICP Whisperer        │ 90           │ Targeted web search       │
-│ Senior Engineer      │ 60           │ Some web search + analysis│
-│ Legal Advisor        │ 60           │ Some web search + analysis│
+│ Architect + Technical Cofounder      │ 60           │ Some web search + analysis│
+│ Critic legal-risk lens        │ 60           │ Some web search + analysis│
 │ GTM Specialist       │ 90           │ Heavy web search          │
 │ Critic               │ 60           │ Analysis only, no search  │
 │ Verifier             │ 15           │ Haiku, no tools, fast     │
@@ -1738,7 +1749,7 @@ CONTENT FAILURES (agent-level, not API-level):
 
 ### Parallel Fan-Out Failure Handling
 
-When one of the three research agents fails during `Promise.all`, we switch to `Promise.allSettled` so surviving agents' results aren't lost:
+When one of the three research agents fails, `Promise.allSettled` ensures the surviving agents' results aren't lost:
 
 ```
 Promise.allSettled([Scout, Analyst, Sizer])
@@ -2199,11 +2210,11 @@ Most startup validation tools make a critical UX mistake: they assume the user a
 
 ValidatorAI's own data shows that 19% of founders describe their target customer as simply "people" or "users" — fundamentally too vague to research. Jumping straight to canvas initialization and research with a vague idea wastes tokens, produces generic results, and fails the user at the moment they need help most.
 
-The existing Phase 0 (Intake) does some clarifying, but it initializes the canvas too quickly — writing an `idea.summary` before the idea is sharp enough to research. This creates a downstream problem: research agents receive briefs based on vague summaries and return vague results.
+The existing Phase 0 (Intake) does some clarifying, but it initializes the structured idea brief too quickly — writing an `idea.summary` before the idea is sharp enough to research. This creates a downstream problem: research agents receive briefs based on vague summaries and return vague results.
 
 ### The Solution: Phase -1 (Warm-Up)
 
-A pre-intake phase where the orchestrator operates purely as a Socratic thinking partner. No agents invoked. No canvas writes. No tools called. Just the orchestrator (on Opus) asking probing questions that force the founder to articulate what they're actually building, who it's for, and why it matters.
+A pre-intake phase where the orchestrator operates as a Socratic thinking partner. No agents invoked. No research fan-out. Tool use is restricted to canvas-only handoff support, and the structured `idea` brief is not written until Intake. The orchestrator (on Opus) asks probing questions that force the founder to articulate what they're actually building, who it's for, and why it matters.
 
 ### Phase -1 Flow
 
@@ -2217,8 +2228,8 @@ Trigger: User's initial input is vague or category-level
 
 Orchestrator behavior:
   • NO agents invoked
-  • NO canvas writes
-  • NO tools called
+  • NO research fan-out
+  • Canvas-only tool access for warmup state and Intake handoff
   • Pure conversation — Opus reasoning only
   • Orchestrator uses Socratic questioning to sharpen the idea
   • Continues until the idea passes the "Research-Ready Test"
@@ -2230,12 +2241,25 @@ Research-Ready Test (ALL must be answerable):
   4. Why is that workaround insufficient?
   5. What would a solution look like in one sentence?
 
-When all 5 are clear → Orchestrator moves to Phase 0 (Intake)
-Canvas initialized with sharp, research-ready answers
+When all 5 are clear → Orchestrator writes the sharpened handoff into canvas and moves to Phase 0 (Intake)
+Intake expands that sharpened idea into the full structured brief
     │
     ▼
-Phase 0: WARMUP / INTAKE (existing — now receives pre-sharpened input)
+Phase 0: INTAKE
 ─────────────────────────────────────────────────────────
+Trigger: Warmup has produced a sharp, research-ready idea
+
+Orchestrator behavior:
+  • Writes or normalizes the structured `idea` brief in canvas
+  • Expands beyond raw idea notes into:
+      - summary
+      - founder context
+      - initial assumptions
+      - open questions
+      - value proposition
+      - possible ICP
+      - timestamp / last_updated
+  • Produces the research brief the downstream swarm will actually use
 ```
 
 ### Orchestrator Warm-Up Behavior
@@ -2348,14 +2372,14 @@ phase:
   | 'launched';
 ```
 
-During warm-up, the canvas exists (so we can resume sessions) but only contains the project name and phase. The `idea` section remains empty until Phase 0.
+During warm-up, the canvas exists so the session can resume cleanly and the orchestrator can carry forward sharpened context. Warm-up can access canvas in a restricted way, but the structured `idea` section is not finalized until Phase 0 (Intake).
 
 ### Why Not a Separate Agent
 
 The warm-up is explicitly NOT a separate agent. Reasons:
 
 1. **Context continuity.** The orchestrator that sharpens the idea should be the same entity that carries the context forward. A handoff would lose nuance.
-2. **No tools needed.** Warm-up is pure reasoning — no web search, no canvas writes, no tool calls. Adding an agent would be overhead.
+2. **No agent or research tools needed.** Warm-up is primarily reasoning. Restricting it to canvas-only handoff support prevents premature fan-out while still allowing a clean transition into Intake.
 3. **Persona consistency.** The founder's first experience should be with their "cofounder," not with a preprocessing step.
 4. **Cost efficiency.** Warm-up is 2–4 orchestrator turns on Opus. Total cost: ~$0.10–0.20. Adding a separate agent would double that for no benefit.
 
@@ -2364,15 +2388,17 @@ The warm-up is explicitly NOT a separate agent. Reasons:
 ```
 Phase -1: WARM-UP (Idea Sharpening)      ← NEW
 ─────────────────────────────────────────
-Orchestrator only. No agents. No canvas writes.
+Orchestrator only. No agents. No research fan-out.
+Canvas-only access for session continuity and Intake handoff.
 Socratic questioning until idea is research-ready.
 Typically 2–4 exchanges. Skipped if idea arrives clear.
 
-Phase 0: WARMUP / INTAKE
+Phase 0: INTAKE
 ─────────────────────────────────────────
-Orchestrator asks 3–5 clarifying questions.
-Canvas initialized with sharp idea summary,
-founder context, assumptions, open questions.
+Orchestrator expands the sharpened idea into the structured brief.
+Canvas `idea` section written with summary, founder context,
+initial assumptions, open questions, value proposition,
+possible ICP, and last_updated timestamp.
 
 Phase 1: MARKET RESEARCH (Parallel Fan-Out)
 Phase 2: ICP DEEP DIVE
@@ -2399,7 +2425,7 @@ Warm-up: 2–4 orchestrator turns (Opus)
 
 ---
 
-## 19. The Pattern Librarian - Cross-Project Knowledge Persistence
+## 19. The Deferred knowledge extraction - Cross-Project Knowledge Persistence
 
 > Sprint note: Deferred from active scope. Keep this as a post-MVP idea, not part of the sprint roster or export flow.
 
@@ -2416,18 +2442,18 @@ The canvas persists per-project. After a project completes, its findings die wit
 
 This is the moat. Every competitor starts every validation from zero. Your swarm gets smarter with every project.
 
-### Design: The Pattern Librarian (Agent 10)
+### Design: The Deferred knowledge extraction (Agent 10)
 
 | Property | Value |
 |---|---|
-| **Agent Name** | The Pattern Librarian |
+| **Agent Name** | The Deferred knowledge extraction |
 | **Model** | `claude-sonnet-4-6` |
 | **Runs When** | After project export (post-`/export` command) |
 | **Input** | Full canvas of the completed project |
 | **Output** | Extracted patterns written to local knowledge base |
 | **Storage** | `knowledge/` directory — JSONL files by category |
 
-The Pattern Librarian is NOT a real-time agent. It runs as a background extraction pass after a project reaches a complete enough state. It reads the full canvas, extracts reusable patterns, and writes them to a local knowledge base.
+The Deferred knowledge extraction is NOT a real-time agent. It runs as a background extraction pass after a project reaches a complete enough state. It reads the full canvas, extracts reusable patterns, and writes them to a local knowledge base.
 
 ### What Gets Extracted
 
@@ -2526,7 +2552,7 @@ If the project scales to thousands of validations, a vector store becomes worthw
 
 ### Privacy Consideration
 
-The Pattern Librarian extracts *patterns*, not project-specific details. It anonymizes:
+The Deferred knowledge extraction extracts *patterns*, not project-specific details. It anonymizes:
 - Founder names and context → stripped
 - Specific project names → replaced with category labels
 - Revenue projections → kept as ranges, not exact figures
@@ -2713,7 +2739,7 @@ These require reasoning, not string manipulation. A Sonnet agent with the full c
 
 | Property | Value |
 |---|---|
-| **Agent Name** | The Synthesizer |
+| **Agent Name** | The Export Agent |
 | **Model** | `claude-sonnet-4-6` |
 | **Runs When** | On `/export` command, after canvas is current |
 | **Input** | Full canvas (raw reports + summaries + decisions + critic reports) |
@@ -2848,7 +2874,7 @@ The scorecard should be written back to the canvas after synthesis for persisten
 }
 ```
 
-This scorecard remains on the canvas for later analysis; no Pattern Librarian runs in sprint scope.
+This scorecard remains on the canvas for later analysis; no Deferred knowledge extraction runs in sprint scope.
 
 ### Updated Agent Roster (Final)
 
@@ -2950,13 +2976,13 @@ function selectOrchestratorModel(
 
 Four consolidation moves:
 
-**1. Replace the standalone Synthesizer with "The Export Agent"; defer the Pattern Librarian**
+**1. Replace the standalone Export Agent with "The Export Agent"; defer the Deferred knowledge extraction**
 
 Both run at export time with the same input (full canvas). One Sonnet call can produce the formatted brief AND extract reusable patterns in a single response. The Export Agent's prompt includes both the synthesis template and the pattern extraction format. Saves one full Sonnet call (~$0.04–0.06).
 
 **2. Fold Legal into the Critic as an optional lens**
 
-The Legal Advisor runs "on demand" and in most validations isn't triggered at all (non-regulated products). Rather than maintaining a separate agent, the Critic's prompt gains a `LEGAL LENS` section that's activated when the orchestrator flags regulatory/IP risk:
+The Critic legal-risk lens runs "on demand" and in most validations isn't triggered at all (non-regulated products). Rather than maintaining a separate agent, the Critic's prompt gains a `LEGAL LENS` section that's activated when the orchestrator flags regulatory/IP risk:
 
 ```
 LEGAL LENS (activate when the orchestrator flags regulatory or IP risk):
@@ -2970,9 +2996,9 @@ If no legal flags: skip this lens entirely.
 
 This means the Critic (already running on Opus, already reading the full canvas) handles legal scanning for ~80% of projects at zero additional cost. For the remaining 20% with serious regulatory exposure, the orchestrator can still invoke a dedicated legal deep-dive using a Sonnet agent — but this becomes a rare exception, not a default phase.
 
-**3. Split Senior Engineer → Technical Cofounder (Opus) + The Architect (Sonnet)**
+**3. Split Architect + Technical Cofounder → Technical Cofounder (Opus) + The Architect (Sonnet)**
 
-The Senior Engineer currently handles everything from architecture decisions to tech stack research. These require very different reasoning depths:
+The Architect + Technical Cofounder currently handles everything from architecture decisions to tech stack research. These require very different reasoning depths:
 
 | Task | Reasoning Depth | Model |
 |---|---|---|
@@ -3025,10 +3051,10 @@ The Scout and ICP Whisperer overlap on community research. Instead of having the
 | 9 | **The Export Agent** | Final brief export | Sonnet 4.6 | On /export | ~| 9 | **The Export Agent** | Synthesis + pattern extraction | Sonnet 4.6 | On /export | ~$0.06 |.06 |
 
 **Changes from previous roster:**
-- Removed: dedicated Legal Advisor (folded into Critic)
-- Removed: standalone Synthesizer from the active roster
+- Removed: dedicated Critic legal-risk lens (folded into Critic)
+- Removed: standalone Export Agent from the active roster
 - Added: The Technical Cofounder (Opus) - for deep technical judgment
-- Deferred: Pattern Librarian / knowledge extraction from sprint scope
+- Deferred: Deferred knowledge extraction / knowledge extraction from sprint scope
 - Added: The Architect (Sonnet) — for technical research and estimation
 - Modified: Orchestrator now routes between Opus and Sonnet per-turn
 

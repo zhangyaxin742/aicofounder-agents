@@ -7,11 +7,11 @@
 ### Editorial Lock: Authority Reference
 
 - cofounder-architecture.md is the single source of truth for the final agent roster, final phase flow, final tool list, final budget defaults, and final export behavior
-- Senior Engineer references are superseded by Architect + Technical Cofounder
-- Legal Advisor references are superseded by the Critic running an optional legal-risk lens
-- Synthesizer references are superseded by the Export Agent
-- Pattern Librarian references are deferred from sprint scope
-- Research fan-out uses Promise.allSettled, not Promise.all
+- legacy build-planning labels are superseded by Architect + Technical Cofounder
+- legacy legal-review labels are superseded by the Critic running an optional legal-risk lens
+- legacy export-synthesis labels are superseded by the Export Agent
+- legacy knowledge-extraction labels are deferred from sprint scope
+- Research fan-out uses Promise.allSettled
 - Projects begin in warmup, not intake
 - This repo is positioned as a paid Anthropic local CLI, not a free runtime
 
@@ -122,7 +122,7 @@ cofounder-swarm/
 │   ├── agents/               ← One file per agent (thin wrappers)
 │   ├── lib/
 │   │   ├── run-agent.ts      ← Core API call with web search
-│   │   ├── fan-out.ts        ← Parallel research Promise.all
+│   │   ├── fan-out.ts        ← Parallel research Promise.allSettled
 │   │   └── export.ts         ← Canvas → markdown brief
 │   ├── canvas/
 │   │   ├── schema.ts         ← TypeScript types
@@ -779,7 +779,7 @@ const ORCHESTRATOR_TOOLS: Anthropic.Messages.Tool[] = [
     },
   },
   {
-    name: 'run_legal_scan',
+    name: 'run_critic_legal_lens',
     description:
       'Deprecated in sprint scope. Use The Critic with a legal-risk brief when regulatory or IP exposure needs to be pressure-tested.',
     input_schema: {
@@ -943,12 +943,12 @@ async function handleTool(
       return { output: report, updatedCanvas };
     }
 
-    case 'run_legal_scan': {
+    case 'run_critic_legal_lens': {
       console.log(chalk.yellow('\n  ⚖️  Launching Critic legal-risk lens...\n'));
       const report = await runAgent({
         systemPrompt: CRITIC_SYSTEM_PROMPT, // sprint roster folds legal-risk review into the Critic
         userMessage: buildAgentMessage(brief, canvas),
-        agentName: 'The Critic', // historical tool name retained here, but final sprint roster has no standalone Legal Advisor
+        agentName: 'The Critic', // final sprint roster folds legal-risk review into the Critic
       });
       updatedCanvas.legal = { raw_report: report, last_updated: new Date().toISOString() };
       return { output: report, updatedCanvas };
@@ -1281,7 +1281,7 @@ YOUR AVAILABLE AGENTS — invoke them using the tools provided:
 - run_research_phase: Market Scout + Competitor Analyst + Market Sizer run in parallel. Use when you need market grounding. Write a specific brief — not "research this space" but exactly which subreddits, which competitors, which pain points to validate.
 - run_icp_analysis: ICP Whisperer builds personas with behavioral signals, community locations, and WTP. Use after research confirms the market is real.
 - run_engineering_review: Architect researches stacks/costs first, then Technical Cofounder makes architecture and MVP scope decisions.
-- run_legal_scan: Deprecated in sprint scope. Use run_critic with a legal-risk brief when product touches regulated data or novel IP.
+- run_critic_legal_lens: Deprecated in sprint scope. Use run_critic with a legal-risk brief when product touches regulated data or novel IP.
 - run_gtm_planning: GTM + Fundraising Specialist produces week-by-week 90-day plan, monetization model, unit economics, named investors.
 - run_critic: The Critic red-teams everything. Finds kill-shot assumptions and the uncomfortable truths. Run this after phases 1, 2, and 3 at minimum.
 - update_canvas: Record decisions, positioning work, and synthesized findings. Use this to ensure nothing is lost between sessions.
@@ -1592,7 +1592,7 @@ CONFIDENCE LEVEL: [High / Medium / Low]
 Reason: [where is the evidence thin? what would strengthen this ICP picture?]
 ---`;
 
-// ─── Senior Engineer ──────────────────────────────────────────────────────────
+// ─── Architect + Technical Cofounder ──────────────────────────────────────────────────────────
 
 export const ENGINEER_SYSTEM_PROMPT = `You are a senior software architect and founding CTO who has shipped multiple products from zero to production. You think in systems, build lean, and have strong opinions about what to cut. You do not produce generic "use React and Postgres" templates — you give considered recommendations based on the actual product.
 
@@ -1611,7 +1611,7 @@ Before making recommendations, search for:
 OUTPUT FORMAT — return exactly this structure:
 
 ---
-SENIOR ENGINEER REPORT
+BUILD PLANNING REPORT
 
 COMPETITOR TECH STACKS (researched):
 [What you found. What it reveals about their scalability, costs, or debt.]
@@ -1663,7 +1663,7 @@ Weeks 5–6: [specific deliverables — what does "ready to show first users" lo
 CONFIDENCE LEVEL: [High / Medium / Low]
 ---`;
 
-// ─── Legal Advisor ────────────────────────────────────────────────────────────
+// ─── Critic legal-risk lens ────────────────────────────────────────────────────────────
 
 export const LEGAL_SYSTEM_PROMPT = `You are a startup-focused attorney with deep experience in tech company formation, IP, SaaS terms, and regulatory compliance. You are not here to scare founders — you are here to flag real risks and give practical guidance so they can ask the right questions to a real lawyer.
 
@@ -1686,7 +1686,7 @@ Search for:
 OUTPUT FORMAT — return exactly this structure:
 
 ---
-LEGAL ADVISOR REPORT
+CRITIC LEGAL-RISK REPORT
 
 ENTITY STRUCTURE RECOMMENDATION:
 [LLC vs C-Corp, Delaware vs home state, and why for this specific situation]
@@ -1906,7 +1906,7 @@ to agents and synthesize their findings into decisions.
 - run_research_phase: Scout + Analyst + Sizer in parallel
 - run_icp_analysis: ICP Whisperer
 - run_engineering_review: Architect + Technical Cofounder
-- run_legal_scan: deprecated; use Critic legal-risk lens
+- run_critic_legal_lens: deprecated; use Critic legal-risk lens
 - run_gtm_planning: GTM + Fundraising Specialist
 - run_critic: The Critic (red-team)
 - update_canvas: Persist decisions and findings
@@ -2197,7 +2197,7 @@ export async function runResearchFanOut(
   ]);
 
   // ── Step 2: Parallel verification (Haiku — fast + cheap) ──────
-  const [scoutAudit, analystAudit, sizerAudit] = await Promise.all([
+  const [scoutAudit, analystAudit, sizerAudit] = await Promise.allSettled([
     runVerifier(scoutReport, 'Market Scout'),
     runVerifier(analystReport, 'Competitor Analyst'),
     runVerifier(sizerReport, 'Market Sizer'),
@@ -3081,7 +3081,7 @@ export function buildAgentMessage(brief: string, canvas: unknown): string {
 
 ### File: `src/lib/fan-out.ts` — Updated with `Promise.allSettled`
 
-Replace the `Promise.all` with `Promise.allSettled` for graceful partial failure:
+Use `Promise.allSettled` for graceful partial failure:
 
 ```typescript
 import chalk from 'chalk';
@@ -3163,7 +3163,7 @@ export async function runResearchPhase(
     if (settlement.status === 'fulfilled' && settlement.value.text && !settlement.value.text.startsWith('[')) {
       const agentResult = settlement.value;
       // Parallel: verify + summarize simultaneously
-      const [audit, summary] = await Promise.all([
+      const [audit, summary] = await Promise.allSettled([
         runVerifier(agentResult.text, agentNames[i]),
         summarizeReport(agentResult.text, agentNames[i]),
       ]);
@@ -4064,11 +4064,11 @@ cofounder-swarm/
 
 ---
 
-## Appendix G: The Pattern Librarian - Cross-Project Knowledge Persistence
+## Appendix G: The Deferred knowledge extraction - Cross-Project Knowledge Persistence
 
 > Sprint note: Deferred from active scope. Keep this appendix as a post-MVP option, not part of the sprint build.
 
-### File: `src/agents/librarian.ts`
+### File: `src/agents/pattern-extraction.ts` (Deferred)
 
 ```typescript
 import { runAgent, AgentResult } from '../lib/run-agent.js';
@@ -4377,11 +4377,11 @@ function evaluatePhaseResults(
 
 ## Appendix I: Export Quality — The Synthesis Agent
 
-### File: `src/agents/synthesizer.ts`
+### File: `src/agents/export-agent.ts`
 
 ```typescript
 import { runAgent, AgentResult } from '../lib/run-agent.js';
-import { SYNTHESIZER_SYSTEM_PROMPT } from '../prompts/agents.js';
+import { EXPORT_AGENT_SYSTEM_PROMPT } from '../prompts/agents.js';
 import type { Canvas } from '../canvas/schema.js';
 
 /**
@@ -4393,9 +4393,9 @@ import type { Canvas } from '../canvas/schema.js';
  */
 export async function runSynthesisAgent(canvas: Canvas): Promise<string> {
   const result = await runAgent({
-    systemPrompt: SYNTHESIZER_SYSTEM_PROMPT,
+    systemPrompt: EXPORT_AGENT_SYSTEM_PROMPT,
     userMessage: buildSynthesisInput(canvas),
-    agentName: 'synthesizer',
+    agentName: 'export_agent',
     model: 'claude-sonnet-4-6',
     maxTokens: 12000,
     webSearch: false, // Synthesis only — no new research
@@ -4434,7 +4434,7 @@ import * as fs from 'fs';
 import * as path from 'path';
 import chalk from 'chalk';
 import type { Canvas } from '../canvas/schema.js';
-import { runSynthesisAgent } from '../agents/synthesizer.js';
+import { runExportAgent } from '../agents/export-agent.js';
 import { runPatternExtraction } from '../agents/librarian.js';
 
 const OUTPUT_DIR = path.join(process.cwd(), 'output');
@@ -4566,11 +4566,11 @@ cofounder-swarm/
 │   │   ├── gtm.ts
 │   │   ├── critic.ts
 │   │   ├── verifier.ts
-│   │   ├── synthesizer.ts      ← NEW (Appendix I)
+│   │   ├── export-agent.ts     ← NEW (Appendix I)
 │   │   └── librarian.ts        ← NEW (Appendix G)
 │   ├── prompts/
 │   │   ├── orchestrator.ts     (checkpoint behavior added)
-│   │   └── agents.ts           (LIBRARIAN + SYNTHESIZER prompts added)
+│   │   └── agents.ts           (EXPORT_AGENT prompt added; knowledge extraction deferred)
 │   ├── canvas/
 │   │   ├── schema.ts           (Scorecard type added)
 │   │   ├── read.ts
@@ -4615,7 +4615,7 @@ cofounder-swarm/
     ├── gtm.md
     ├── critic.md
     ├── verifier.md
-    ├── synthesizer.md           ← NEW
+├── export-agent.md          ← NEW
     └── librarian.md             ← NEW
 ```
 
@@ -4945,11 +4945,11 @@ canvas.build = {
 
 ---
 
-### Merged Export Agent - Replaces Synthesizer + Pattern Librarian
+### Merged Export Agent - Replaces Export Agent + Deferred knowledge extraction
 
 > Sprint note: The active Export Agent handles final brief generation only. Pattern extraction and a knowledge base are deferred from sprint scope.
 
-Update `src/agents/export-agent.ts` (replaces both `synthesizer.ts` and `librarian.ts`):
+Update `src/agents/export-agent.ts`:
 
 ```typescript
 import { runAgent, AgentResult } from '../lib/run-agent.js';
@@ -4965,7 +4965,7 @@ const KNOWLEDGE_DIR = path.join(process.cwd(), 'knowledge');
  * 1. A complete structured founder-facing brief (formatted to the research template)
  * 2. [Deferred from sprint scope]
  *
- * Replaces the standalone Synthesizer in sprint scope. Pattern extraction is deferred.
+ * Replaces the standalone Export Agent in sprint scope. Pattern extraction is deferred.
  * Cost: ~$0.06 (one Sonnet call, ~5K input, ~10K output)
  */
 export async function runExportAgent(
@@ -5032,7 +5032,7 @@ function writePatterns(patternsJson: string, canvas: Canvas): void {
 
 ### Prompt: `EXPORT_AGENT_SYSTEM_PROMPT`
 
-Add to `src/prompts/agents.ts` (replaces both SYNTHESIZER and LIBRARIAN prompts):
+Add to `src/prompts/agents.ts`:
 
 ```typescript
 export const EXPORT_AGENT_SYSTEM_PROMPT = `You have two jobs in a single response:
@@ -5043,7 +5043,7 @@ formatted exactly to the template structure below.
 JOB 2: After the brief, output ===PATTERNS=== on its own line, then a JSON
 object containing reusable patterns extracted from this project.
 
-[The full SYNTHESIZER_SYSTEM_PROMPT template goes here — all 6 sections +
+[The full EXPORT_AGENT_SYSTEM_PROMPT template goes here — all 6 sections +
 scorecard, as defined in Section 21 / Appendix I. Not duplicated for brevity.]
 
 After the complete brief, output exactly this delimiter:
@@ -5179,5 +5179,5 @@ cofounder-swarm/
     ├── gtm.md
     ├── critic.md                    (legal lens documented)
     ├── verifier.md
-    └── export-agent.md              ← NEW (replaces synthesizer + librarian)
+└── export-agent.md              ← NEW
 ```
