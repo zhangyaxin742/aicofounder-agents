@@ -1,157 +1,200 @@
 # Cofounder Agent Swarm - Planned Codebase
 
-> Target end state after sprint: run locally with your own Anthropic API key via a terminal-first CLI. This document describes the planned codebase; the architecture doc is the source of truth for final roster, phase flow, tool list, budget defaults, and export behavior.
+> Target end state after sprint: run locally with your own Anthropic API key via a terminal-first CLI. This document exists only to describe implementation of the final sprint architecture. [cofounder-architecture.md](/C:/Users/user/Documents/GitHub/aicofounder-agents/cofounder-architecture.md) is the source of truth for final roster, phase flow, tool list, budget defaults, and export behavior.
 
 ---
 
 ### Editorial Lock: Authority Reference
 
-- cofounder-architecture.md is the single source of truth for the final agent roster, final phase flow, final tool list, final budget defaults, and final export behavior
-- legacy build-planning labels are superseded by Architect + Technical Cofounder
-- legacy legal-review labels are superseded by the Critic running an optional legal-risk lens
-- legacy export-synthesis labels are superseded by the Export Agent
-- legacy knowledge-extraction labels are deferred from sprint scope
-- Research fan-out uses Promise.allSettled
-- Projects begin in warmup, not intake
-- This repo is positioned as a paid Anthropic local CLI, not a free runtime
+- `cofounder-architecture.md` is the single source of truth for the final agent roster, final phase flow, final tool list, final budget defaults, and final export behavior
+- this codebase doc describes only the implementation of that final sprint architecture
+- this is a standalone Node/TypeScript terminal CLI using `@anthropic-ai/sdk` with `ANTHROPIC_API_KEY`
+- there is no Anthropic CLI dependency or shell-out path in the sprint implementation
+- final active roster only: Orchestrator, Market Scout, Competitor Analyst, Market Sizer, ICP Whisperer, Architect, Technical Cofounder, GTM Specialist, Critic, Verifier, Export Agent
+- research fan-out uses `Promise.allSettled`
+- projects begin in `warmup`, then move into `intake`
+- web search stays ON only for Scout, Analyst, Sizer, ICP, Architect, and GTM when needed
+- web search stays OFF for Orchestrator, Technical Cofounder, Critic, Verifier, and Export Agent
+- Verifier scope is structure validation, sourcing presence, and hallucination markers only
+- Pattern Librarian and knowledge extraction are deferred from sprint scope
+- structured machine-readable output is required; section-header presence is not the primary contract
+- context stays small by default through context slices and summaries; full canvas is reserved for Critic and Export Agent
+- `MAX_SESSION_COST=2.00`
 
 ## README
 
 ```markdown
 # Cofounder Agent Swarm
 
-A terminal-first local CLI that uses the Anthropic API to run an AI cofounder swarm. The active sprint roster is: Orchestrator, Market Scout, Competitor Analyst, Market Sizer, ICP Whisperer, Architect, Technical Cofounder, GTM Specialist, Critic, Verifier, and Export Agent.
+A standalone local Node/TypeScript CLI that runs an AI cofounder swarm in terminal by calling Anthropic directly through `@anthropic-ai/sdk`.
 
-No web app. No database. No auth. Run locally with your own Anthropic API key.
+No Anthropic CLI. No web app. No hosted backend. Bring your own `ANTHROPIC_API_KEY`.
 
 ---
 
 ## What It Does
 
-You describe your product idea. The Orchestrator leads the conversation, challenges assumptions, launches research, and pulls in specialist reports only when needed.
+You describe a startup idea. The Orchestrator sharpens it, challenges weak assumptions, launches specialist research only when the idea is ready, and drives the project toward a founder-facing export.
 
-- Parallel market research via Scout, Analyst, and Sizer
-- ICP analysis grounded in sourced pain and willingness-to-pay signals
-- Build planning split between Architect research and Technical Cofounder judgment
-- GTM planning and post-milestone Critic pressure tests
-- Legal-risk flagging through the Critic's optional legal lens; AI is not a lawyer
-- Verifier checks for structure, sourcing presence, and obvious hallucination markers
+- `warmup` sharpens vague ideas through Socratic questioning
+- `intake` writes the structured idea brief into canvas
+- Scout, Analyst, and Sizer run in parallel with `Promise.allSettled`
+- ICP analysis develops the clearest customer and willingness-to-pay view
+- Architect researches stack, integrations, and infrastructure tradeoffs
+- Technical Cofounder makes the architecture, scope, and build-vs-buy judgment calls
+- GTM Specialist frames launch, channels, and monetization
+- Critic pressure-tests the business and can apply an optional legal-risk lens
+- Verifier checks structure, source presence, and obvious hallucination markers
 - Export Agent writes the final markdown brief to `/output`
 
 ## Agent Roster
 
 | Agent | Model | Role |
 |---|---|---|
-| The Orchestrator | claude-opus-4-6 | Leads the conversation and directs all agents |
-| Market Scout | claude-sonnet-4-6 | Pain mining, VOC, demand signals |
-| Competitor Analyst | claude-sonnet-4-6 | Competitor map, pricing, complaints, tech stacks |
-| Market Sizer | claude-sonnet-4-6 | TAM/SAM/SOM, timing, funding landscape |
-| ICP Whisperer | claude-sonnet-4-6 | Personas, WTP, community locations |
-| Architect | claude-sonnet-4-6 | Stack research, infrastructure costs, integrations, build sequence |
-| Technical Cofounder | claude-opus-4-6 | Architecture decisions, MVP cuts, build-vs-buy, technical risk judgment |
-| GTM Specialist | claude-sonnet-4-6 | 90-day plan, monetization framing, channel strategy |
-| The Critic | claude-opus-4-6 | Kill-shot assumptions, adversarial red-team, optional legal-risk lens |
-| The Verifier | claude-haiku-4-5-20251001 | Structural checks, sourcing presence, hallucination markers |
-| Export Agent | claude-sonnet-4-6 | Final markdown brief export |
+| Orchestrator | claude-opus-4-6 | Leads conversation, phase flow, and tool routing |
+| Market Scout | claude-sonnet-4-6 | Pain mining, user quotes, demand signals |
+| Competitor Analyst | claude-sonnet-4-6 | Competitor map, pricing, complaints, positioning |
+| Market Sizer | claude-sonnet-4-6 | TAM/SAM/SOM, timing, funding and growth signals |
+| ICP Whisperer | claude-sonnet-4-6 | Personas, urgency, WTP, buying context |
+| Architect | claude-sonnet-4-6 | Technical research, stack and infra evaluation |
+| Technical Cofounder | claude-opus-4-6 | Architecture judgment, MVP cuts, technical risk |
+| GTM Specialist | claude-sonnet-4-6 | Channel strategy, launch plan, monetization framing |
+| Critic | claude-opus-4-6 | Red-team pressure test, optional legal-risk lens |
+| Verifier | claude-haiku-4-5-20251001 | Contract validation, source presence, hallucination markers |
+| Export Agent | claude-sonnet-4-6 | Final markdown brief generation |
 
-Scout, Analyst, and Sizer run in parallel with `Promise.allSettled` during the research phase.
-Projects start in `warmup`, not `intake`.
-Expected cost per full run: roughly `$0.60-$2.00`, depending on reruns and session length.
-```
+Research fan-out uses `Promise.allSettled`.
+Projects begin in `warmup`, then move into `intake`.
+Expected cost per full run: roughly `$0.60-$2.00`, depending on session length, reruns, and how much iteration happens before the idea is research-ready.
 
-## Prerequisites
+## Requirements
 
-- Node.js 18+
-- An Anthropic API key (https://console.anthropic.com)
-- VS Code (recommended - canvas and briefs render natively)
+- Node.js 20+
+- npm 10+
+- Anthropic API key
 
----
 ## Installation
 
 ```bash
-git clone https://github.com/YOUR_USERNAME/cofounder-swarm
-cd cofounder-swarm
+git clone https://github.com/YOUR_USERNAME/aicofounder-agents
+cd aicofounder-agents
 npm install
 cp .env.example .env
-# Open .env and add your ANTHROPIC_API_KEY
+# edit .env and add ANTHROPIC_API_KEY
 npm start
 ```
 
-## Usage
+## Configuration
 
+`.env.example`
+
+```bash
+ANTHROPIC_API_KEY=sk-ant-your-key-here
+MAX_SESSION_COST=2.00
+COST_WARNING_THRESHOLD=0.80
 ```
-You: I want to build a tool that helps solo founders validate startup ideas faster
 
-── COFOUNDER ──────────────────────────────────────────────────
+## Running The CLI
 
-Interesting. Before we go further — "faster" compared to what? 
-What's the specific friction point you're solving for? Because 
-"faster validation" is a feature, not a product. What does the 
-founder actually feel when they hit this problem?
+The CLI starts a local REPL. Give it a vague idea or a sharp one.
 
-I'm going to pull in research to ground this. Launching Scout,
-Analyst, and Sizer in parallel now...
+```text
+You: I want to build something for solo founders.
+
+Cofounder:
+That's still too broad to research well.
+What specific recurring workflow is breaking for solo founders today, and what are they doing instead?
 ```
+
+If the idea is vague, the Orchestrator stays in `warmup`. Once the idea is sharp enough, it writes the intake brief into canvas and proceeds to research.
 
 ## REPL Commands
 
 | Command | What It Does |
 |---|---|
-| `/export` | Assembles full canvas into a markdown brief → /output |
-| `/canvas` | Prints the current canvas JSON to terminal |
-| `/rerun` | Resets research phase so the next conversation turn re-runs Scout, Analyst, and Sizer |
-| `/quit` or `/exit` | Saves canvas and exits |
-| Ctrl+C | Emergency exit (canvas auto-saved on each turn) |
-
-## Customizing Prompts
-
-All agent system prompts live in `/prompts` as plain `.md` files.
-Edit them without touching any code. The TypeScript files in
-`src/prompts/` just import these as strings.
+| `/canvas` | Print the current canvas JSON to terminal |
+| `/rerun research` | Re-run Scout, Analyst, and Sizer using the current intake brief |
+| `/rerun icp` | Re-run ICP analysis |
+| `/rerun build` | Re-run Architect followed by Technical Cofounder |
+| `/rerun gtm` | Re-run GTM planning |
+| `/critic` | Run the Critic with the default lens |
+| `/critic legal` | Run the Critic with the legal-risk lens |
+| `/export` | Run Export Agent and write the final brief to `/output` |
+| `/quit` or `/exit` | Save canvas and exit |
+| Ctrl+C | Emergency exit; canvas should already be auto-saved |
 
 ## Project Structure
 
-```
-cofounder-swarm/
+```text
+aicofounder-agents/
 ├── .env.example
+├── README.md
 ├── package.json
 ├── tsconfig.json
 ├── src/
-│   ├── index.ts              ← REPL entry point
-│   ├── orchestrator.ts       ← Orchestrator loop + tool handling
-│   ├── agents/               ← One file per agent (thin wrappers)
-│   ├── lib/
-│   │   ├── run-agent.ts      ← Core API call with web search
-│   │   ├── fan-out.ts        ← Parallel research Promise.allSettled
-│   │   └── export.ts         ← Canvas → markdown brief
+│   ├── index.ts
+│   ├── orchestrator.ts
+│   ├── agents/
+│   │   ├── scout.ts
+│   │   ├── analyst.ts
+│   │   ├── sizer.ts
+│   │   ├── icp.ts
+│   │   ├── architect.ts
+│   │   ├── technical-cofounder.ts
+│   │   ├── gtm.ts
+│   │   ├── critic.ts
+│   │   ├── verifier.ts
+│   │   └── export-agent.ts
+│   ├── prompts/
+│   │   ├── orchestrator.ts
+│   │   └── agents.ts
 │   ├── canvas/
-│   │   ├── schema.ts         ← TypeScript types
-│   │   ├── read.ts           ← Load canvas from disk
-│   │   └── write.ts          ← Save canvas to disk
-│   └── prompts/
-│       ├── orchestrator.ts   ← Orchestrator system prompt
-│       └── agents.ts         ← All agent system prompts
-├── prompts/                  ← Raw .md prompt files (edit these)
+│   │   ├── schema.ts
+│   │   ├── read.ts
+│   │   └── write.ts
+│   └── lib/
+│       ├── run-agent.ts
+│       ├── fan-out.ts
+│       ├── export.ts
+│       ├── context-builder.ts
+│       ├── summarize.ts
+│       ├── telemetry.ts
+│       └── budget.ts
+├── prompts/
 │   ├── orchestrator.md
 │   ├── scout.md
-│   └── ...
-├── canvas/                   ← Auto-created. One JSON per project.
-└── output/                   ← Exported briefs land here
+│   ├── analyst.md
+│   ├── sizer.md
+│   ├── icp.md
+│   ├── architect.md
+│   ├── technical-cofounder.md
+│   ├── gtm.md
+│   ├── critic.md
+│   ├── verifier.md
+│   └── export-agent.md
+├── canvas/
+├── output/
+└── logs/
 ```
 
-## Cost Estimates
+## Debugging / Troubleshooting
 
-Full research phase (3 parallel agents): ~$0.30–0.60
-Full project run (all phases): ~$2–5 depending on depth
+- Invalid `ANTHROPIC_API_KEY`: confirm `.env` is loaded and the key is active
+- Session stops near budget limit: check `MAX_SESSION_COST` and `COST_WARNING_THRESHOLD`
+- Research is generic: the intake brief is still too vague; tighten the idea and rerun
+- Export missing: confirm `/output` exists and rerun `/export`
+- Partial research results: one agent may have failed, but the system should continue with successful reports
 
-## Contributing
+## Prompt Customization
 
-PRs welcome. The most valuable contributions are improved agent
-prompts — edit the /prompts .md files and open a PR.
+Prompt markdown lives in `/prompts`, while the runtime prompt exports live in `src/prompts/`.
+The implementation assumes these stay aligned.
 
----
+## Limitations
 
-Built with the Anthropic API. No affiliation with Anthropic.
+- AI is not a lawyer; the legal lens only flags risks
+- this is decision support, not investor-grade certainty
+- output quality depends on the specificity of the intake brief and the quality of available sources
 ```
 
 ---
@@ -221,99 +264,92 @@ ANTHROPIC_API_KEY=sk-ant-your-key-here
 ## File: `src/canvas/schema.ts`
 
 ```typescript
+export type ProjectPhase =
+  | 'warmup'
+  | 'intake'
+  | 'research'
+  | 'icp'
+  | 'build'
+  | 'gtm'
+  | 'critic'
+  | 'exported';
+
+export interface VerificationMetadata {
+  passed: boolean;
+  issues: string[];
+  source_count: number;
+  hallucination_markers: string[];
+  checked_at: string;
+}
+
+export interface StoredAgentReport {
+  raw_markdown: string;
+  structured: Record<string, unknown>;
+  verification: VerificationMetadata;
+  summary: string;
+  timestamp: string;
+}
+
 export interface Canvas {
   project: {
     id: string;
     name: string;
     created_at: string;
-    phase:
-      | 'warmup'
-      | 'intake'
-      | 'research'
-      | 'icp'
-      | 'positioning'
-      | 'build'
-      | 'gtm'
-      | 'fundraising'
-      | 'launched';
+    phase: ProjectPhase;
   };
   idea: {
     summary?: string;
     founder_context?: string;
     initial_assumptions?: string[];
     open_questions?: string[];
+    value_proposition?: string;
+    possible_icp?: string[];
     last_updated?: string;
   };
   research: {
-    raw_reports?: {
-      scout?: string;
-      analyst?: string;
-      sizer?: string;
-    };
-    pain_signals?: string[];
-    user_quotes?: string[];
-    market_size?: {
-      tam?: string;
-      sam?: string;
-      som?: string;
-    };
-    timing_verdict?: string;
+    reports: Partial<Record<'scout' | 'analyst' | 'sizer', StoredAgentReport>>;
+    failures: Array<{
+      phase: 'research';
+      reason: string;
+      timestamp: string;
+    }>;
     last_updated?: string;
   };
   icp: {
-    raw_report?: string;
-    personas?: unknown[];
-    primary_icp?: string;
-    willingness_to_pay?: string;
-    last_updated?: string;
-  };
-  positioning: {
-    thesis?: string;
-    feature_strategy?: unknown[];
-    blue_ocean?: unknown;
-    one_liner?: string;
+    report?: StoredAgentReport;
     last_updated?: string;
   };
   build: {
-    raw_report?: string;
-    mvp_scope?: unknown[];
-    recommended_stack?: unknown;
-    technical_risks?: string[];
-    last_updated?: string;
-  };
-  legal: {
-    raw_report?: string;
-    risks?: unknown[];
-    actions_required?: string[];
+    architect?: StoredAgentReport;
+    technical_cofounder?: StoredAgentReport;
     last_updated?: string;
   };
   gtm: {
-    raw_report?: string;
-    primary_channel?: string;
-    monetization_model?: unknown;
-    unit_economics?: unknown;
+    report?: StoredAgentReport;
     last_updated?: string;
   };
-  fundraising: {
-    strategy?: string;
-    investor_list?: unknown[];
-    pitch_framing?: unknown;
+  critic: {
+    reports: Array<StoredAgentReport>;
     last_updated?: string;
   };
-  critic_reports: Array<{
-    report: string;
-    timestamp: string;
-  }>;
+  risks: {
+    items?: unknown[];
+    last_updated?: string;
+  };
+  scorecard?: {
+    verdict?: string;
+    notes?: string[];
+    last_updated?: string;
+  };
+  exports?: {
+    last_path?: string;
+    exported_at?: string;
+  };
   decisions: Array<{
     date: string;
     decision: string;
     rationale?: string;
   }>;
-  risks: {
-    items?: unknown[];
-    last_updated?: string;
-  };
-  [key: string]: unknown;
 }
 ```
 
@@ -411,96 +447,147 @@ export function saveCanvas(slug: string, canvas: Canvas): void {
 ```typescript
 import Anthropic from '@anthropic-ai/sdk';
 import chalk from 'chalk';
+import type { Canvas } from '../canvas/schema.js';
+import { buildContextSlice } from './context-builder.js';
+import { recordCost } from './budget.js';
+import { logAgentRun } from './telemetry.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
-// Anthropic built-in web search tool.
-// Searches are executed server-side — no external API keys needed.
 const WEB_SEARCH_TOOL = {
   type: 'web_search_20250305',
   name: 'web_search',
 } as unknown as Anthropic.Messages.Tool;
 
+export type AgentName =
+  | 'scout'
+  | 'analyst'
+  | 'sizer'
+  | 'icp'
+  | 'architect'
+  | 'technical-cofounder'
+  | 'gtm'
+  | 'critic'
+  | 'verifier'
+  | 'export-agent';
+
+export interface AgentResult {
+  markdown: string;
+  structured: Record<string, unknown>;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+  };
+}
+
 export interface AgentOptions {
+  agent: AgentName;
   systemPrompt: string;
-  userMessage: string;
-  agentName: string;
+  brief: string;
+  canvas: Canvas;
   model?: string;
   maxTokens?: number;
-  webSearch?: boolean;
+  timeoutMs?: number;
 }
+
+const AGENT_MODEL_DEFAULTS: Record<AgentName, string> = {
+  scout: 'claude-sonnet-4-6',
+  analyst: 'claude-sonnet-4-6',
+  sizer: 'claude-sonnet-4-6',
+  icp: 'claude-sonnet-4-6',
+  architect: 'claude-sonnet-4-6',
+  'technical-cofounder': 'claude-opus-4-6',
+  gtm: 'claude-sonnet-4-6',
+  critic: 'claude-opus-4-6',
+  verifier: 'claude-haiku-4-5-20251001',
+  'export-agent': 'claude-sonnet-4-6',
+};
+
+const WEB_SEARCH_ENABLED: Record<AgentName, boolean> = {
+  scout: true,
+  analyst: true,
+  sizer: true,
+  icp: true,
+  architect: true,
+  'technical-cofounder': false,
+  gtm: true,
+  critic: false,
+  verifier: false,
+  'export-agent': false,
+};
 
 export async function runAgent({
+  agent,
   systemPrompt,
-  userMessage,
-  agentName,
-  model = 'claude-sonnet-4-6',
+  brief,
+  canvas,
+  model = AGENT_MODEL_DEFAULTS[agent],
   maxTokens = 8000,
-  webSearch = true,
-}: AgentOptions): Promise<string> {
-  process.stdout.write(chalk.yellow(`  → ${agentName} researching`));
-
-  // Animate dots while waiting
+  timeoutMs = 60000,
+}: AgentOptions): Promise<AgentResult> {
+  process.stdout.write(chalk.yellow(`  → ${agent}`));
   const interval = setInterval(() => process.stdout.write(chalk.yellow('.')), 1200);
 
-  // Retry on transient errors (overload / rate limit) with exponential backoff.
-  // Max 3 attempts: immediate, 8s, 24s.
-  const MAX_RETRIES = 3;
-  const BACKOFF_BASE_MS = 8_000;
-  const RETRYABLE = ['overloaded_error', 'rate_limit_error', '529', '529'];
+  const userMessage = buildAgentMessage(agent, brief, canvas);
+  const response = await withRetries(async () =>
+    withTimeout(
+      client.messages.create({
+        model,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+        ...(WEB_SEARCH_ENABLED[agent] ? { tools: [WEB_SEARCH_TOOL] } : {}),
+      }),
+      timeoutMs
+    )
+  ).finally(() => clearInterval(interval));
 
-  let response!: Anthropic.Messages.Message; // assigned before use — loop throws on all failure paths
-  let lastError: unknown;
-
-  try {
-    for (let attempt = 0; attempt < MAX_RETRIES; attempt++) {
-      try {
-        response = await client.messages.create({
-          model,
-          max_tokens: maxTokens,
-          system: systemPrompt,
-          messages: [{ role: 'user', content: userMessage }],
-          ...(webSearch && { tools: [WEB_SEARCH_TOOL] }),
-        });
-        break; // success — exit retry loop
-      } catch (err: unknown) {
-        lastError = err;
-        const msg = err instanceof Error ? err.message : String(err);
-        const isRetryable = RETRYABLE.some((token) => msg.includes(token));
-
-        if (!isRetryable || attempt === MAX_RETRIES - 1) throw err;
-
-        const waitMs = BACKOFF_BASE_MS * Math.pow(3, attempt);
-        process.stdout.write(chalk.yellow(` [retry ${attempt + 1}/${MAX_RETRIES - 1} in ${waitMs / 1000}s]`));
-        await new Promise((resolve) => setTimeout(resolve, waitMs));
-      }
-    }
-  } finally {
-    clearInterval(interval);
-  }
-
-  const inputK = Math.round((response.usage?.input_tokens ?? 0) / 1000);
-  const outputK = Math.round((response.usage?.output_tokens ?? 0) / 1000);
-  process.stdout.write(
-    chalk.green(` done`) + chalk.gray(` (${inputK}k→${outputK}k tokens)\n`)
-  );
-
-  // Extract all text content. Web search results are embedded server-side;
-  // Claude's written report comes through as text blocks.
   const text = response.content
-    .filter((b): b is Anthropic.Messages.TextBlock => b.type === 'text')
-    .map((b) => b.text)
+    .filter((block): block is Anthropic.Messages.TextBlock => block.type === 'text')
+    .map((block) => block.text)
     .join('\n');
 
-  if (!text.trim()) {
-    return `[${agentName} returned no text content. Stop reason: ${response.stop_reason}]`;
-  }
+  const structured = extractStructuredOutput(text);
+  const markdown = stripStructuredOutput(text);
 
-  return text;
+  recordCost(response.usage);
+  logAgentRun({
+    agent,
+    model,
+    usage: response.usage,
+    webSearch: WEB_SEARCH_ENABLED[agent],
+    structuredExtracted: Boolean(structured),
+  });
+
+  process.stdout.write(chalk.green(' done\n'));
+
+  return {
+    markdown,
+    structured,
+    usage: response.usage,
+  };
 }
 
-export function buildAgentMessage(brief: string, canvas: unknown): string {
-  return `<brief>\n${brief}\n</brief>\n\n<canvas>\n${JSON.stringify(canvas, null, 2)}\n</canvas>`;
+export function buildAgentMessage(agent: AgentName, brief: string, canvas: Canvas): string {
+  const context = buildContextSlice({
+    agent,
+    canvas,
+    includeFullCanvas: agent === 'critic' || agent === 'export-agent',
+  });
+
+  return `<brief>\n${brief}\n</brief>\n\n<context>\n${context}\n</context>`;
+}
+
+function extractStructuredOutput(text: string): Record<string, unknown> {
+  const match = text.match(/<json_output>\s*([\s\S]*?)\s*<\/json_output>/i);
+  if (!match) {
+    throw new Error('Structured output missing from agent response');
+  }
+  return JSON.parse(match[1]);
+}
+
+function stripStructuredOutput(text: string): string {
+  return text.replace(/<json_output>[\s\S]*?<\/json_output>/i, '').trim();
 }
 ```
 
@@ -510,82 +597,92 @@ export function buildAgentMessage(brief: string, canvas: unknown): string {
 
 ```typescript
 import chalk from 'chalk';
-import { runAgent, buildAgentMessage } from './run-agent.js';
+import { runAgent } from './run-agent.js';
 import { SCOUT_SYSTEM_PROMPT, ANALYST_SYSTEM_PROMPT, SIZER_SYSTEM_PROMPT } from '../prompts/agents.js';
 import type { Canvas } from '../canvas/schema.js';
-
-export interface ResearchPhaseResult {
-  scoutReport: string;
-  analystReport: string;
-  sizerReport: string;
-}
-
-// Minimum token threshold for a valid agent report.
-// Reports shorter than this are almost certainly truncated or errored.
-const MIN_REPORT_TOKENS = 300;
+import { runVerifier } from '../agents/verifier.js';
+import { summarizeReport } from './summarize.js';
 
 /**
  * Runs Scout, Analyst, and Sizer in parallel.
- * Each agent operates in its own context window — no cross-contamination.
  * Uses Promise.allSettled so one failed agent doesn't kill the whole phase.
- * Results are returned to the orchestrator for synthesis.
+ * Each successful output is verified, summarized, and persisted in canvas.
  */
-export async function runResearchPhase(
-  brief: string,
-  canvas: Canvas
-): Promise<ResearchPhaseResult> {
-  const message = buildAgentMessage(brief, canvas);
-
+export async function runResearchPhase(brief: string, canvas: Canvas): Promise<Canvas> {
   console.log(chalk.yellow('\n  Launching Scout, Analyst, and Sizer in parallel...\n'));
 
-  // allSettled: a single agent failure returns a fallback string rather than
-  // throwing and losing all three results.
-  const [scoutSettled, analystSettled, sizerSettled] = await Promise.allSettled([
+  const settled = await Promise.allSettled([
     runAgent({
+      agent: 'scout',
       systemPrompt: SCOUT_SYSTEM_PROMPT,
-      userMessage: message,
-      agentName: 'Market Scout     ',
+      brief,
+      canvas,
     }),
     runAgent({
+      agent: 'analyst',
       systemPrompt: ANALYST_SYSTEM_PROMPT,
-      userMessage: message,
-      agentName: 'Competitor Analyst',
+      brief,
+      canvas,
     }),
     runAgent({
+      agent: 'sizer',
       systemPrompt: SIZER_SYSTEM_PROMPT,
-      userMessage: message,
-      agentName: 'Market Sizer     ',
+      brief,
+      canvas,
     }),
   ]);
 
-  function resolveReport(settled: PromiseSettledResult<string>, agentName: string): string {
-    if (settled.status === 'rejected') {
-      console.error(chalk.red(`  ✗ ${agentName} failed: ${settled.reason}`));
-      return `[${agentName} FAILED — ${settled.reason}. Re-run or proceed with partial data.]`;
+  const reportNames: Array<'scout' | 'analyst' | 'sizer'> = ['scout', 'analyst', 'sizer'];
+  canvas.research.reports ??= {};
+  canvas.research.failures ??= [];
+
+  for (const [index, result] of settled.entries()) {
+    const reportName = reportNames[index];
+
+    if (result.status === 'rejected') {
+      console.error(chalk.red(`  ✗ ${reportName} failed: ${String(result.reason)}`));
+      canvas.research.failures.push({
+        phase: 'research',
+        reason: String(result.reason),
+        timestamp: new Date().toISOString(),
+      });
+      continue;
     }
-    const text = settled.value;
-    // Rough token estimate: 1 token ≈ 4 chars
-    if (text.length < MIN_REPORT_TOKENS * 4) {
-      console.warn(chalk.yellow(`  ⚠ ${agentName} output is suspiciously short (${text.length} chars). May be incomplete.`));
-    }
-    return text;
+
+    const verification = await runVerifier({
+      sourceAgent: reportName,
+      markdown: result.value.markdown,
+      structured: result.value.structured,
+      canvas,
+    });
+
+    const summary = await summarizeReport({
+      agent: reportName,
+      structured: result.value.structured,
+      verification,
+    });
+
+    canvas.research.reports[reportName] = {
+      raw_markdown: result.value.markdown,
+      structured: result.value.structured,
+      verification,
+      summary,
+      timestamp: new Date().toISOString(),
+    };
   }
 
-  const scoutReport   = resolveReport(scoutSettled,   'Market Scout');
-  const analystReport = resolveReport(analystSettled, 'Competitor Analyst');
-  const sizerReport   = resolveReport(sizerSettled,   'Market Sizer');
-
-  const failCount = [scoutSettled, analystSettled, sizerSettled].filter(s => s.status === 'rejected').length;
+  const failCount = settled.filter((result) => result.status === 'rejected').length;
   if (failCount === 3) {
     throw new Error('All three research agents failed. Check API key and network, then retry.');
   }
   if (failCount > 0) {
-    console.log(chalk.yellow(`\n  ⚠ Research phase complete with ${failCount} agent failure(s). Orchestrator will see failure notices inline.\n`));
+    console.log(chalk.yellow(`\n  ⚠ Research phase complete with ${failCount} agent failure(s).\n`));
   } else {
     console.log(chalk.green('\n  ✓ Research phase complete\n'));
   }
 
-  return { scoutReport, analystReport, sizerReport };
+  canvas.research.last_updated = new Date().toISOString();
+  return canvas;
 }
 ```
 
@@ -597,6 +694,7 @@ export async function runResearchPhase(
 import * as fs from 'fs';
 import * as path from 'path';
 import type { Canvas } from '../canvas/schema.js';
+import { runExportAgent } from '../agents/export-agent.js';
 
 const OUTPUT_DIR = path.join(process.cwd(), 'output');
 
@@ -607,100 +705,16 @@ export async function exportBrief(canvas: Canvas, slug: string): Promise<string>
   const date = new Date().toISOString().split('T')[0];
   const filename = `${slug}-brief-${date}.md`;
   const filePath = path.join(OUTPUT_DIR, filename);
-  const brief = assembleBrief(canvas);
-  fs.writeFileSync(filePath, brief, 'utf-8');
+
+  const result = await runExportAgent(canvas);
+  fs.writeFileSync(filePath, result.markdown, 'utf-8');
+
+  canvas.exports = {
+    last_path: filePath,
+    exported_at: new Date().toISOString(),
+  };
+
   return filePath;
-}
-
-function section(title: string, content: string): string {
-  return `---\n\n## ${title}\n\n${content}`;
-}
-
-function assembleBrief(canvas: Canvas): string {
-  const parts: string[] = [];
-
-  parts.push(`# ${canvas.project.name} — Research Brief`);
-  parts.push(
-    `**Date:** ${new Date().toISOString().split('T')[0]}  \n` +
-    `**Phase:** ${canvas.project.phase}  \n` +
-    `**Project ID:** ${canvas.project.id}`
-  );
-
-  if (canvas.idea?.summary) {
-    const idea = canvas.idea;
-    let content = idea.summary ?? '';
-    if (idea.initial_assumptions?.length) {
-      content += '\n\n**Initial Assumptions:**\n' +
-        idea.initial_assumptions.map((a) => `- ${a}`).join('\n');
-    }
-    if (idea.open_questions?.length) {
-      content += '\n\n**Open Questions:**\n' +
-        idea.open_questions.map((q) => `- ${q}`).join('\n');
-    }
-    parts.push(section('Idea Summary', content));
-  }
-
-  const r = canvas.research;
-  if (r?.raw_reports) {
-    const researchParts: string[] = [];
-    if (r.raw_reports.scout) {
-      researchParts.push(`### Market Scout Report\n\n${r.raw_reports.scout}`);
-    }
-    if (r.raw_reports.analyst) {
-      researchParts.push(`### Competitor Analysis\n\n${r.raw_reports.analyst}`);
-    }
-    if (r.raw_reports.sizer) {
-      researchParts.push(`### Market Sizing\n\n${r.raw_reports.sizer}`);
-    }
-    if (researchParts.length) {
-      parts.push(section('SECTION 1: Market Research', researchParts.join('\n\n')));
-    }
-  }
-
-  if (canvas.icp?.raw_report) {
-    parts.push(section('SECTION 2: ICP & Customer Intelligence', canvas.icp.raw_report));
-  }
-
-  if (canvas.positioning?.thesis) {
-    let content = `**Thesis:** ${canvas.positioning.thesis}`;
-    if (canvas.positioning.one_liner) {
-      content += `\n\n**One-liner:** ${canvas.positioning.one_liner}`;
-    }
-    parts.push(section('SECTION 3: Differentiation & Positioning', content));
-  }
-
-  if (canvas.build?.raw_report) {
-    parts.push(section('SECTION 4: Tech & Product Stack', canvas.build.raw_report));
-  }
-
-  if (canvas.legal?.raw_report) {
-    parts.push(section('Legal Assessment', canvas.legal.raw_report));
-  }
-
-  if (canvas.gtm?.raw_report) {
-    parts.push(section('SECTION 5–6: GTM & Fundraising', canvas.gtm.raw_report));
-  }
-
-  if (canvas.critic_reports?.length) {
-    const criticContent = canvas.critic_reports
-      .map((r, i) => `### Critic Report ${i + 1} — ${r.timestamp.split('T')[0]}\n\n${r.report}`)
-      .join('\n\n');
-    parts.push(section('Critic Reports', criticContent));
-  }
-
-  if (canvas.decisions?.length) {
-    const decisionsContent = canvas.decisions
-      .map((d) => {
-        let line = `**${d.date}:** ${d.decision}`;
-        if (d.rationale) line += `\n*Rationale: ${d.rationale}*`;
-        return line;
-      })
-      .join('\n\n');
-    parts.push(section('Decision Log', decisionsContent));
-  }
-
-  parts.push('\n---\n\n*Generated by Cofounder Agent Swarm*');
-  return parts.join('\n\n');
 }
 ```
 
@@ -715,13 +729,15 @@ import type { Canvas } from './canvas/schema.js';
 import { ORCHESTRATOR_SYSTEM_PROMPT } from './prompts/orchestrator.js';
 import {
   ICP_SYSTEM_PROMPT,
-  ENGINEER_SYSTEM_PROMPT,
-  LEGAL_SYSTEM_PROMPT,
+  ARCHITECT_SYSTEM_PROMPT,
+  TECHNICAL_COFOUNDER_SYSTEM_PROMPT,
   GTM_SYSTEM_PROMPT,
   CRITIC_SYSTEM_PROMPT,
 } from './prompts/agents.js';
 import { runResearchPhase } from './lib/fan-out.js';
-import { runAgent, buildAgentMessage } from './lib/run-agent.js';
+import { runAgent } from './lib/run-agent.js';
+import { runVerifier } from './agents/verifier.js';
+import { summarizeReport } from './lib/summarize.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -733,14 +749,14 @@ const ORCHESTRATOR_TOOLS: Anthropic.Messages.Tool[] = [
   {
     name: 'run_research_phase',
     description:
-      'Launch the parallel research swarm: Market Scout (pain mining, Reddit, VOC), Competitor Analyst (landscape, pricing, complaints), and Market Sizer (TAM/SAM/SOM, timing, funding) all run simultaneously. Use this when you need market grounding before moving forward. CALL THIS TOOL ONLY ONCE PER PROJECT — re-running it wastes ~$0.15–0.30 and overwrites prior findings. If the user wants to revisit specific research questions, use individual follow-up conversation instead.',
+      'Launch the parallel research swarm: Market Scout, Competitor Analyst, and Market Sizer. Use this once the idea has passed warmup and has been written into intake.',
     input_schema: {
       type: 'object' as const,
       properties: {
         brief: {
           type: 'string',
           description:
-            'A detailed, specific research brief covering three distinct territories — one per agent. (1) Scout territory: which specific subreddits, review platforms, and communities to mine for pain language. (2) Analyst territory: which named competitors to map, what pricing/feature gaps to look for. (3) Sizer territory: which market definition to use, which data sources to pull. Vague briefs produce duplicate work across agents.',
+            'A detailed research brief covering pain signals, competitors, and market sizing without duplicating work across agents.',
         },
       },
       required: ['brief'],
@@ -749,46 +765,30 @@ const ORCHESTRATOR_TOOLS: Anthropic.Messages.Tool[] = [
   {
     name: 'run_icp_analysis',
     description:
-      'Launch the ICP Whisperer to build detailed customer personas, willingness-to-pay ranges, behavioral signals, and specific community locations for the target customer.',
+      'Launch the ICP Whisperer to build customer personas, urgency, willingness-to-pay signals, and community locations.',
     input_schema: {
       type: 'object' as const,
       properties: {
         brief: {
           type: 'string',
           description:
-            'What specifically to investigate about the customer. Which segments to explore, what WTP data to find, which communities to check.',
+            'What specifically to investigate about the customer and buying context.',
         },
       },
       required: ['brief'],
     },
   },
   {
-    name: 'run_engineering_review',
+    name: 'run_build_phase',
     description:
-      'Launch the Architect first and then the Technical Cofounder to produce stack research, infrastructure cost modeling, MVP scope cuts, build-vs-buy decisions, and technical risks.',
+      'Launch Architect first, then Technical Cofounder, to produce technical research plus architecture and MVP judgment.',
     input_schema: {
       type: 'object' as const,
       properties: {
         brief: {
           type: 'string',
           description:
-            'What to focus on. Which product decisions to validate. What technical unknowns to surface.',
-        },
-      },
-      required: ['brief'],
-    },
-  },
-  {
-    name: 'run_critic_legal_lens',
-    description:
-      'Deprecated in sprint scope. Use The Critic with a legal-risk brief when regulatory or IP exposure needs to be pressure-tested.',
-    input_schema: {
-      type: 'object' as const,
-      properties: {
-        brief: {
-          type: 'string',
-          description:
-            'Which legal areas to focus on. Any specific regulatory concerns, IP questions, or data handling risks to investigate.',
+            'What product decisions to validate and what technical unknowns to surface.',
         },
       },
       required: ['brief'],
@@ -797,14 +797,14 @@ const ORCHESTRATOR_TOOLS: Anthropic.Messages.Tool[] = [
   {
     name: 'run_gtm_planning',
     description:
-      'Launch the GTM + Fundraising Specialist to produce a week-by-week 90-day plan, monetization model, unit economics, and a named investor list with thesis and check sizes.',
+      'Launch GTM Specialist to produce the launch plan, monetization framing, and channel strategy.',
     input_schema: {
       type: 'object' as const,
       properties: {
         brief: {
           type: 'string',
           description:
-            'Which GTM questions to answer and what fundraising context to consider.',
+            'Which GTM questions to answer and what launch constraints to consider.',
         },
       },
       required: ['brief'],
@@ -813,14 +813,18 @@ const ORCHESTRATOR_TOOLS: Anthropic.Messages.Tool[] = [
   {
     name: 'run_critic',
     description:
-      'Launch The Critic for adversarial red-teaming. Surfaces kill-shot assumptions, competitive vulnerabilities, distribution fantasies, and the uncomfortable truths the team is avoiding. Run this after every major milestone.',
+      'Launch Critic for adversarial red-teaming. Optional legal-risk behavior is handled through the `lens` parameter, not a separate legal agent.',
     input_schema: {
       type: 'object' as const,
       properties: {
         brief: {
           type: 'string',
           description:
-            'What to specifically pressure-test. Which assumptions to attack. What the founder seems most attached to.',
+            'What to specifically pressure-test and which assumptions to attack.',
+        },
+        lens: {
+          type: 'string',
+          enum: ['default', 'legal-risk'],
         },
       },
       required: ['brief'],
@@ -829,35 +833,81 @@ const ORCHESTRATOR_TOOLS: Anthropic.Messages.Tool[] = [
   {
     name: 'update_canvas',
     description:
-      'Write structured data to the project canvas. Use this after synthesizing agent outputs — record the key findings, decisions, and positioning work so nothing is lost between sessions.',
+      'Write structured data to the project canvas. In warmup, this is the only available tool and is used to transition into intake.',
     input_schema: {
       type: 'object' as const,
       properties: {
+        phase_transition: {
+          type: 'string',
+          enum: ['intake'],
+        },
+        idea_summary: { type: 'string' },
+        founder_context: { type: 'string' },
+        initial_assumptions: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        open_questions: {
+          type: 'array',
+          items: { type: 'string' },
+        },
+        value_proposition: { type: 'string' },
+        possible_icp: {
+          type: 'array',
+          items: { type: 'string' },
+        },
         section: {
           type: 'string',
-          enum: [
-            'idea',
-            'research',
-            'icp',
-            'positioning',
-            'build',
-            'legal',
-            'gtm',
-            'fundraising',
-            'decisions',
-            'risks',
-          ],
-          description: 'Which canvas section to update.',
+          enum: ['research', 'icp', 'build', 'gtm', 'decisions', 'risks'],
         },
         content: {
           type: 'object',
           description: 'The structured data to merge into this section.',
         },
       },
-      required: ['section', 'content'],
+      required: [],
     },
   },
 ];
+
+const WARMUP_TOOLS: Anthropic.Messages.Tool[] = ORCHESTRATOR_TOOLS.filter(
+  (tool) => tool.name === 'update_canvas'
+);
+
+function selectOrchestratorModel(canvas: Canvas): string {
+  if (canvas.project.phase === 'warmup') return 'claude-opus-4-6';
+  if (canvas.project.phase === 'research') return 'claude-opus-4-6';
+  if (canvas.project.phase === 'icp') return 'claude-opus-4-6';
+  if (canvas.project.phase === 'critic') return 'claude-opus-4-6';
+  return 'claude-sonnet-4-6';
+}
+
+async function verifyAndStore(
+  sourceAgent: 'icp' | 'architect' | 'technical-cofounder' | 'gtm' | 'critic',
+  result: Awaited<ReturnType<typeof runAgent>>,
+  canvas: Canvas
+) {
+  const verification = await runVerifier({
+    sourceAgent,
+    markdown: result.markdown,
+    structured: result.structured,
+    canvas,
+  });
+
+  const summary = await summarizeReport({
+    agent: sourceAgent,
+    structured: result.structured,
+    verification,
+  });
+
+  return {
+    raw_markdown: result.markdown,
+    structured: result.structured,
+    verification,
+    summary,
+    timestamp: new Date().toISOString(),
+  };
+}
 
 // ─── Tool Handler ─────────────────────────────────────────────────────────────
 
@@ -871,125 +921,131 @@ async function handleTool(
 
   switch (toolName) {
     case 'run_research_phase': {
-      // Phase gate: research runs once per project. If the canvas already has
-      // research data and the user hasn't explicitly requested a rerun, return
-      // a warning rather than overwriting findings and burning $0.15–0.30.
-      if (!@('warmup', 'intake').Contains(canvas.project.phase) && canvas.research?.raw_reports) {
+      if (canvas.project.phase === 'warmup') {
         return {
-          output: `Research phase already completed (phase: ${canvas.project.phase}). Raw reports are in the canvas. To re-run research, type /rerun in the chat.`,
+          output: 'Research is locked during warmup. Use update_canvas to transition into intake first.',
           updatedCanvas: canvas,
         };
       }
 
-      const { scoutReport, analystReport, sizerReport } = await runResearchPhase(brief, canvas);
-
-      // Validate that each report contains its required section header before
-      // writing to canvas. A missing header means the agent produced malformed
-      // output (truncation, refusal, or hallucination) and the orchestrator
-      // should see a warning alongside the raw text rather than silently
-      // persisting bad data.
-      function validateReport(report: string, expectedHeader: string, agentName: string): string {
-        if (!report.includes(expectedHeader)) {
-          console.warn(chalk.yellow(`  ⚠ ${agentName} output missing expected header "${expectedHeader}". May be malformed.`));
-          return `[VALIDATION WARNING: ${agentName} output did not contain "${expectedHeader}". Review carefully.]\n\n${report}`;
-        }
-        return report;
-      }
-
-      const validatedScout   = validateReport(scoutReport,   'MARKET SCOUT REPORT',      'Market Scout');
-      const validatedAnalyst = validateReport(analystReport, 'COMPETITOR ANALYST REPORT', 'Competitor Analyst');
-      const validatedSizer   = validateReport(sizerReport,   'MARKET SIZER REPORT',       'Market Sizer');
-
-      const output = [
-        '=== MARKET SCOUT REPORT ===',
-        validatedScout,
-        '',
-        '=== COMPETITOR ANALYST REPORT ===',
-        validatedAnalyst,
-        '',
-        '=== MARKET SIZER REPORT ===',
-        validatedSizer,
-      ].join('\n');
-      updatedCanvas.research = {
-        ...canvas.research,
-        raw_reports: { scout: validatedScout, analyst: validatedAnalyst, sizer: validatedSizer },
-        last_updated: new Date().toISOString(),
-      };
+      updatedCanvas = await runResearchPhase(brief, updatedCanvas);
       updatedCanvas.project.phase = 'research';
-      return { output, updatedCanvas };
+      return { output: 'Research phase complete.', updatedCanvas };
     }
 
     case 'run_icp_analysis': {
       console.log(chalk.yellow('\n  👤 Launching ICP Whisperer...\n'));
-      const report = await runAgent({
+      const result = await runAgent({
+        agent: 'icp',
         systemPrompt: ICP_SYSTEM_PROMPT,
-        userMessage: buildAgentMessage(brief, canvas),
-        agentName: 'ICP Whisperer',
+        brief,
+        canvas,
       });
-      updatedCanvas.icp = { raw_report: report, last_updated: new Date().toISOString() };
+      updatedCanvas.icp = {
+        report: await verifyAndStore('icp', result, updatedCanvas),
+        last_updated: new Date().toISOString(),
+      };
       updatedCanvas.project.phase = 'icp';
-      return { output: report, updatedCanvas };
+      return { output: 'ICP analysis complete.', updatedCanvas };
     }
 
-    case 'run_engineering_review': {
+    case 'run_build_phase': {
       console.log(chalk.yellow('\n  ⚙️  Launching Architect, then Technical Cofounder...\n'));
-      const report = await runAgent({
-        systemPrompt: ARCHITECT_SYSTEM_PROMPT, // sprint roster: Architect researches first; Technical Cofounder then judges
-        userMessage: buildAgentMessage(brief, canvas),
-        agentName: 'Architect', // historical snippet retained; active sprint flow is Architect + Technical Cofounder
-      });
-      updatedCanvas.build = { raw_report: report, last_updated: new Date().toISOString() };
-      updatedCanvas.project.phase = 'build';
-      return { output: report, updatedCanvas };
-    }
 
-    case 'run_critic_legal_lens': {
-      console.log(chalk.yellow('\n  ⚖️  Launching Critic legal-risk lens...\n'));
-      const report = await runAgent({
-        systemPrompt: CRITIC_SYSTEM_PROMPT, // sprint roster folds legal-risk review into the Critic
-        userMessage: buildAgentMessage(brief, canvas),
-        agentName: 'The Critic', // final sprint roster folds legal-risk review into the Critic
+      const architect = await runAgent({
+        agent: 'architect',
+        systemPrompt: ARCHITECT_SYSTEM_PROMPT,
+        brief,
+        canvas,
       });
-      updatedCanvas.legal = { raw_report: report, last_updated: new Date().toISOString() };
-      return { output: report, updatedCanvas };
+
+      const technicalCofounder = await runAgent({
+        agent: 'technical-cofounder',
+        systemPrompt: TECHNICAL_COFOUNDER_SYSTEM_PROMPT,
+        brief,
+        canvas,
+      });
+
+      updatedCanvas.build = {
+        architect: await verifyAndStore('architect', architect, updatedCanvas),
+        technical_cofounder: await verifyAndStore('technical-cofounder', technicalCofounder, updatedCanvas),
+        last_updated: new Date().toISOString(),
+      };
+      updatedCanvas.project.phase = 'build';
+      return { output: 'Build phase complete.', updatedCanvas };
     }
 
     case 'run_gtm_planning': {
-      console.log(chalk.yellow('\n  🚀 Launching GTM + Fundraising Specialist...\n'));
-      const report = await runAgent({
+      console.log(chalk.yellow('\n  🚀 Launching GTM Specialist...\n'));
+      const result = await runAgent({
+        agent: 'gtm',
         systemPrompt: GTM_SYSTEM_PROMPT,
-        userMessage: buildAgentMessage(brief, canvas),
-        agentName: 'GTM Specialist',
+        brief,
+        canvas,
       });
-      updatedCanvas.gtm = { raw_report: report, last_updated: new Date().toISOString() };
+      updatedCanvas.gtm = {
+        report: await verifyAndStore('gtm', result, updatedCanvas),
+        last_updated: new Date().toISOString(),
+      };
       updatedCanvas.project.phase = 'gtm';
-      return { output: report, updatedCanvas };
+      return { output: 'GTM planning complete.', updatedCanvas };
     }
 
     case 'run_critic': {
-      console.log(chalk.yellow('\n  🔥 Launching The Critic...\n'));
-      const report = await runAgent({
+      console.log(chalk.yellow('\n  🔥 Launching Critic...\n'));
+      const lens = toolInput.lens === 'legal-risk' ? 'legal-risk' : 'default';
+      const result = await runAgent({
+        agent: 'critic',
         systemPrompt: CRITIC_SYSTEM_PROMPT,
-        userMessage: buildAgentMessage(brief, canvas),
-        agentName: 'The Critic',
-        model: 'claude-opus-4-6', // Critic always runs Opus
-        maxTokens: 6000,
+        brief: `Lens: ${lens}\n\n${brief}`,
+        canvas,
       });
-      updatedCanvas.critic_reports = [
-        ...(canvas.critic_reports ?? []),
-        { report, timestamp: new Date().toISOString() },
+      updatedCanvas.critic.reports = [
+        ...(updatedCanvas.critic.reports ?? []),
+        await verifyAndStore('critic', result, updatedCanvas),
       ];
-      return { output: report, updatedCanvas };
+      updatedCanvas.critic.last_updated = new Date().toISOString();
+      updatedCanvas.project.phase = 'critic';
+      return { output: `Critic complete (${lens}).`, updatedCanvas };
     }
 
     case 'update_canvas': {
-      const s = toolInput.section as string;
-      updatedCanvas[s] = {
-        ...(typeof canvas[s] === 'object' && canvas[s] !== null ? canvas[s] as object : {}),
-        ...(toolInput.content as object),
-        last_updated: new Date().toISOString(),
-      };
-      return { output: `Canvas section "${s}" updated.`, updatedCanvas };
+      if (toolInput.phase_transition === 'intake') {
+        updatedCanvas.project.phase = 'intake';
+        updatedCanvas.idea = {
+          summary: String(toolInput.idea_summary ?? ''),
+          founder_context: String(toolInput.founder_context ?? ''),
+          initial_assumptions: Array.isArray(toolInput.initial_assumptions)
+            ? toolInput.initial_assumptions.map(String)
+            : [],
+          open_questions: Array.isArray(toolInput.open_questions)
+            ? toolInput.open_questions.map(String)
+            : [],
+          value_proposition: String(toolInput.value_proposition ?? ''),
+          possible_icp: Array.isArray(toolInput.possible_icp)
+            ? toolInput.possible_icp.map(String)
+            : [],
+          last_updated: new Date().toISOString(),
+        };
+        return {
+          output: 'Idea sharpened and project moved from warmup to intake.',
+          updatedCanvas,
+        };
+      }
+
+      if (toolInput.section && toolInput.content) {
+        const section = String(toolInput.section) as 'research' | 'icp' | 'build' | 'gtm' | 'decisions' | 'risks';
+        updatedCanvas[section] = {
+          ...(typeof updatedCanvas[section] === 'object' && updatedCanvas[section] !== null
+            ? updatedCanvas[section] as object
+            : {}),
+          ...(toolInput.content as object),
+          last_updated: new Date().toISOString(),
+        } as never;
+        return { output: `Canvas section "${section}" updated.`, updatedCanvas };
+      }
+
+      return { output: 'No canvas update applied.', updatedCanvas };
     }
 
     default:
@@ -1015,11 +1071,11 @@ export async function runOrchestratorTurn(
   // Agentic loop — continue while orchestrator is calling tools
   while (true) {
     const response = await client.messages.create({
-      model: 'claude-opus-4-6',
+      model: selectOrchestratorModel(updatedCanvas),
       max_tokens: 4096,
       system: systemPrompt,
       messages: currentMessages,
-      tools: ORCHESTRATOR_TOOLS,
+      tools: updatedCanvas.project.phase === 'warmup' ? WARMUP_TOOLS : ORCHESTRATOR_TOOLS,
     });
 
     // Capture any text the orchestrator produced this turn
@@ -1066,8 +1122,15 @@ export async function runOrchestratorTurn(
 }
 ```
 
----
+Notes:
+- `warmup` is tool-limited and cannot trigger research fan-out.
+- `update_canvas` is the only warmup tool and is used to move `warmup -> intake`.
+- build planning is Architect first, then Technical Cofounder.
+- the legal path is a Critic lens parameter, not a standalone agent.
+- `/export` should invoke Export Agent through `src/lib/export.ts`.
+- structured output plus Verifier metadata is the validation path; markdown headers are not.
 
+---
 ## File: `src/index.ts`
 
 ```typescript
