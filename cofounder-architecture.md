@@ -312,9 +312,9 @@ YOUR AVAILABLE AGENTS (invoke by name and give them explicit task descriptions):
 - competitor_analyst: Competitor mapping, pricing, complaints
 - market_sizer: TAM/SAM/SOM, market structure, funding data
 - icp_whisperer: Persona building, willingness-to-pay, where to find them
-- senior_engineer: MVP stack, build sequence, technical tradeoffs
-- legal_advisor: IP risk, regulatory exposure, entity structure
-- gtm_specialist: Distribution strategy, first 90 days, investor targeting
+- architect: stack, integration, and infrastructure research
+- technical_cofounder: architecture judgment, MVP cuts, build-vs-buy, technical risks
+- gtm_specialist: Distribution strategy, first 90 days, monetization framing
 - the_critic: Red-team, kill-shot assumptions, adversarial pressure
 
 INVOCATION FORMAT (when invoking agents, tell the user):
@@ -1024,7 +1024,7 @@ The canvas is the product's memory. It's injected into every orchestrator turn. 
     "id": "uuid",
     "name": "string",
     "created_at": "timestamp",
-    "phase": "warmup | intake | research | icp | positioning | build | gtm | fundraising | launched"
+    "phase": "warmup | intake | research | icp | build | gtm | critic | exported"
   },
   "idea": {
     "summary": "string",
@@ -1049,35 +1049,32 @@ The canvas is the product's memory. It's injected into every orchestrator turn. 
     "willingness_to_pay": "string",
     "where_to_find": ["string"]
   },
-  "positioning": {
-    "thesis": "string",
-    "feature_strategy": [...],
-    "blue_ocean": {...},
-    "one_liner": "string"
-  },
   "build": {
-    "mvp_scope": [...],
-    "recommended_stack": {...},
-    "build_sequence": [...],
-    "technical_risks": [...]
-  },
-  "legal": {
-    "risks": [...],
-    "actions_required": [...],
-    "entity_recommendation": "string"
+    "architect": {
+      "report_type": "architect",
+      "summary": "string",
+      "sources": ["string"],
+      "verification": {...}
+    },
+    "technical_cofounder": {
+      "report_type": "technical_cofounder",
+      "summary": "string",
+      "verification": {...}
+    }
   },
   "gtm": {
-    "primary_channel": "string",
-    "first_90_days": [...],
-    "monetization_model": {...},
-    "unit_economics": {...}
+    "report_type": "gtm",
+    "summary": "string",
+    "verification": {...}
   },
-  "fundraising": {
-    "strategy": "string",
-    "investor_list": [...],
-    "pitch_framing": {...}
+  "critic": {
+    "reports": [...],
+    "legal_lens_used": "boolean"
   },
-  "critic_reports": [...],
+  "exports": {
+    "last_path": "string",
+    "exported_at": "timestamp"
+  },
   "decisions": [
     { "date": "...", "decision": "...", "rationale": "..." }
   ],
@@ -1203,7 +1200,8 @@ cofounder-swarm/
 │   │   ├── architect.ts       # Architect
 │   │   ├── technical-cofounder.ts # Technical Cofounder
 │   │   ├── gtm.ts             # GTM Specialist
-│   │   └── critic.ts          # The Critic
+│   │   ├── critic.ts          # The Critic
+|   |   └──verifier.ts         # The Verifier
 │   ├── prompts/
 │   │   ├── orchestrator.ts    # Orchestrator system prompt (with canvas injection)
 │   │   └── [agent].ts         # One file per agent system prompt
@@ -1226,12 +1224,13 @@ cofounder-swarm/
     ├── orchestrator.md
     ├── scout.md
     ├── analyst.md
+    ├── architect.md
     ├── sizer.md
     ├── icp.md
-    ├── engineer.md
-    ├── legal.md
+    ├── technical-cofounder.md
     ├── gtm.md
-    └── critic.md
+    ├── critic.md
+    └──verifier.md
 ```
 
 ### Running It
@@ -1307,7 +1306,7 @@ Your existing `/startup-research` skill maps directly onto this architecture. He
 └─────────────────────────────────────────────────────────┘
 ```
 
-The `/startup-research` skill's **research-template.md** becomes the output schema for the full swarm run. When a user wants a complete founder brief, the orchestrator runs all agents in sequence, collects all canvas sections, and a final synthesis agent assembles everything into the template format and exports it.
+The `/startup-research` skill's **research-template.md** becomes the output schema for the full swarm run. When a user wants a complete founder brief, the orchestrator runs all agents in sequence, collects all canvas sections, and the Export Agent assembles everything into the template format and exports it.
 
 **Key advantage over running `/startup-research` directly:** The swarm produces the brief through real conversation over multiple sessions, with canvas state persisted. The brief isn't written in one pass — it's assembled from verified findings across a real product-building journey.
 
@@ -1533,33 +1532,6 @@ Before synthesizing findings into the canvas:
 | **Total per full run** | **7 calls** | | **~$0.02** |
 
 Negligible. Less than 5% cost increase on the full research phase.
-
-### Updated Repo Structure
-
-```
-src/agents/
-├── scout.ts
-├── analyst.ts
-├── sizer.ts
-├── icp.ts
-├── engineer.ts
-├── legal.ts
-├── gtm.ts
-├── critic.ts
-└── verifier.ts          ← NEW
-
-prompts/
-├── orchestrator.md       (modified — verification context added)
-├── scout.md              (modified — sourcing rules added)
-├── analyst.md            (modified — sourcing rules added)
-├── sizer.md              (modified — sourcing rules added)
-├── icp.md                (modified — sourcing rules added)
-├── engineer.md           (modified — sourcing rules added)
-├── legal.md              (modified — sourcing rules added)
-├── gtm.md                (modified — sourcing rules added)
-├── critic.md             (unchanged)
-└── verifier.md           ← NEW
-```
 
 ---
 
@@ -2361,15 +2333,14 @@ The phase enum in the canvas schema gains a new value:
 
 ```typescript
 phase:
-  | 'warmup'      // ← NEW: Pre-intake idea sharpening
+  | 'warmup'      // â† NEW: Pre-intake idea sharpening
   | 'intake'
   | 'research'
   | 'icp'
-  | 'positioning'
   | 'build'
   | 'gtm'
-  | 'fundraising'
-  | 'launched';
+  | 'critic'
+  | 'exported';
 ```
 
 During warm-up, the canvas exists so the session can resume cleanly and the orchestrator can carry forward sharpened context. Warm-up can access canvas in a restricted way, but the structured `idea` section is not finalized until Phase 0 (Intake).
@@ -2448,12 +2419,12 @@ This is the moat. Every competitor starts every validation from zero. Your swarm
 |---|---|
 | **Agent Name** | The Deferred knowledge extraction |
 | **Model** | `claude-sonnet-4-6` |
-| **Runs When** | After project export (post-`/export` command) |
+| **Runs When** | Post-MVP only — not part of the sprint export path |
 | **Input** | Full canvas of the completed project |
-| **Output** | Extracted patterns written to local knowledge base |
-| **Storage** | `knowledge/` directory — JSONL files by category |
+| **Output** | Future reusable patterns, if this post-MVP system is ever built |
+| **Storage** | Deferred — no active `knowledge/` runtime directory in the sprint implementation |
 
-The Deferred knowledge extraction is NOT a real-time agent. It runs as a background extraction pass after a project reaches a complete enough state. It reads the full canvas, extracts reusable patterns, and writes them to a local knowledge base.
+The Deferred knowledge extraction is NOT a real-time agent and is NOT part of the sprint runtime. Keep this appendix as a future design note only. In the shipping MVP, `/export` stops after the Export Agent writes the final brief to `/output`.
 
 ### What Gets Extracted
 
@@ -2518,9 +2489,9 @@ Each file is JSONL (one JSON object per line, append-only). Example entry in `pr
 }
 ```
 
-### How the Knowledge Base Is Used
+### How the Knowledge Base Would Be Used (Post-MVP Only)
 
-On every NEW project, during Phase 1 (Research), the orchestrator checks the knowledge base for relevant prior patterns and injects them into agent briefs:
+This is intentionally NOT part of the sprint workflow. If built later, a future orchestrator could check a knowledge base for relevant prior patterns and inject them into agent briefs:
 
 ```
 Research brief enrichment flow:
@@ -2541,7 +2512,7 @@ Example injection into Scout brief:
 
 ### Why JSONL and Not a Vector Database
 
-For a local-first, clone-and-run open-source tool:
+For a future local-first implementation:
 - JSONL requires zero infrastructure — no Postgres, no ChromaDB, no embeddings
 - Files are human-readable — open them in VS Code and browse patterns
 - Git-trackable — the knowledge base can be versioned and shared
@@ -2564,7 +2535,7 @@ The Deferred knowledge extraction extracts *patterns*, not project-specific deta
 
 ### The Problem with Linear Phases
 
-The current architecture moves through phases sequentially: Research → ICP → Positioning → Build → Legal → GTM → Critic. The only hard gate is Phase 7 (Critic), which forces the user to respond to kill-shots before proceeding.
+The current architecture moves through phases sequentially: Warmup → Intake → Research → ICP → Build → GTM → Critic. The only hard gate is the Critic checkpoint, which forces the user to respond to kill-shots before proceeding.
 
 But phases aren't always clean. Common failure modes:
 
@@ -2698,7 +2669,7 @@ This prevents re-runs from being redundant. The orchestrator remembers what work
 
 ---
 
-## 21. Export Quality — The Synthesis Agent
+## 21. Export Quality — The Export Agent Final Pass
 
 ### The Problem: Canvas ≠ Research Template
 
@@ -2718,11 +2689,11 @@ Key misalignments:
 | 6.2 Validation Roadmap | Not in canvas | Partially in `risks` but not structured as tests |
 | Final Scorecard (12 dimensions, 1–10) | Not in canvas | Entirely missing |
 
-### The Solution: A Synthesis Agent (Final Pass)
+### The Solution: The Export Agent Final Pass
 
-Rather than restructuring the entire canvas schema to match the template (which would create tight coupling), we add a **Synthesis Agent** — a Sonnet agent that runs as the final step of `/export`. It reads the full canvas (raw reports + summaries + decisions) and produces a complete research brief formatted exactly to the template spec.
+Rather than restructuring the entire canvas schema to match the template (which would create tight coupling), the sprint implementation uses the **Export Agent** — a Sonnet agent that runs as the final step of `/export`. It reads the full canvas (raw reports + summaries + decisions) and produces a complete research brief formatted exactly to the template spec.
 
-### Why a Synthesis Agent, Not a Code Formatter
+### Why an Export Agent, Not a Code Formatter
 
 The current `assembleBrief()` function in `export.ts` is a string concatenator. It can't:
 - Fill in sections that agents didn't explicitly populate (e.g., History of Attempts)
@@ -2731,9 +2702,9 @@ The current `assembleBrief()` function in `export.ts` is a string concatenator. 
 - Format a BEAT/JOIN/SKIP table from freeform feature strategy notes
 - Write a one-paragraph founder verdict that synthesizes everything
 
-These require reasoning, not string manipulation. A Sonnet agent with the full canvas context and the exact template structure can do this in one pass.
+These require reasoning, not string manipulation. The Export Agent, with the full canvas context and the exact template structure, can do this in one pass.
 
-### Synthesis Agent Design
+### Export Agent Design
 
 > Sprint note: The active sprint export path uses the Export Agent. Keep the synthesis material below as prompt guidance, not as a separate active roster slot.
 
@@ -2747,7 +2718,7 @@ These require reasoning, not string manipulation. A Sonnet agent with the full c
 | **Web Search** | OFF — synthesis only, no new research |
 | **Max Tokens** | 12000 (the full brief is long) |
 
-### Synthesis Agent System Prompt
+### Export Agent System Prompt
 
 ```
 You are an expert research synthesizer. Your job is to take a complete project
@@ -2834,7 +2805,7 @@ User types /export
    - Log completion percentage
     │
     ▼
-2. Run Synthesis Agent (Sonnet)
+2. Run Export Agent (Sonnet)
    - Input: full canvas (raw reports + summaries + all sections)
    - Output: complete formatted brief matching template
    - Cost: ~$0.05–0.10 (one Sonnet call, ~4K input, ~8K output)
@@ -2976,9 +2947,9 @@ function selectOrchestratorModel(
 
 Four consolidation moves:
 
-**1. Replace the standalone Export Agent with "The Export Agent"; defer the Deferred knowledge extraction**
+**1. Keep the Export Agent as the only active export path; defer the Deferred knowledge extraction**
 
-Both run at export time with the same input (full canvas). One Sonnet call can produce the formatted brief AND extract reusable patterns in a single response. The Export Agent's prompt includes both the synthesis template and the pattern extraction format. Saves one full Sonnet call (~$0.04–0.06).
+In the sprint implementation, `/export` runs one Sonnet call that produces the formatted brief only. Pattern extraction is explicitly out of scope and should not be coupled into the shipping export path.
 
 **2. Fold Legal into the Critic as an optional lens**
 
@@ -2994,7 +2965,7 @@ LEGAL RISK section.
 If no legal flags: skip this lens entirely.
 ```
 
-This means the Critic (already running on Opus, already reading the full canvas) handles legal scanning for ~80% of projects at zero additional cost. For the remaining 20% with serious regulatory exposure, the orchestrator can still invoke a dedicated legal deep-dive using a Sonnet agent — but this becomes a rare exception, not a default phase.
+This means the Critic (already running on Opus, already reading the full canvas) handles legal scanning through an optional lens instead of spawning a dedicated legal agent or phase.
 
 **3. Split Architect + Technical Cofounder → Technical Cofounder (Opus) + The Architect (Sonnet)**
 
@@ -3048,11 +3019,11 @@ The Scout and ICP Whisperer overlap on community research. Instead of having the
 | 6 | **The GTM Specialist** | Distribution, investors, 90-day plan | Sonnet 4.6 | GTM phase | ~$0.04 |
 | 7 | **The Critic** | Red-team + legal lens (when flagged) | Opus 4.6 | Post-milestone | ~$0.08 |
 | 8 | **The Verifier** | Factual audit, source checking | Haiku 4.5 | After each agent | ~$0.003 |
-| 9 | **The Export Agent** | Final brief export | Sonnet 4.6 | On /export | ~| 9 | **The Export Agent** | Synthesis + pattern extraction | Sonnet 4.6 | On /export | ~$0.06 |.06 |
+| 9 | **The Export Agent** | Final brief export | Sonnet 4.6 | On /export | ~$0.06 |
 
 **Changes from previous roster:**
 - Removed: dedicated Critic legal-risk lens (folded into Critic)
-- Removed: standalone Export Agent from the active roster
+- Kept: Export Agent as the only active export path
 - Added: The Technical Cofounder (Opus) - for deep technical judgment
 - Deferred: Deferred knowledge extraction / knowledge extraction from sprint scope
 - Added: The Architect (Sonnet) — for technical research and estimation
@@ -3084,7 +3055,7 @@ EXTENDED RUN (re-runs, multiple critic passes, long session):
 Without caching: ~$1.80–2.20
 With caching:    ~$0.90–1.30
 
-MAX_SESSION_COST default: $2.00 (revised down from $5.00)
+MAX_SESSION_COST default: $2.00
 ```
 
 **From $5 to $0.62.** That's an 88% cost reduction through prompt caching + model routing + agent consolidation.
@@ -3130,6 +3101,6 @@ The key insight: **split the user message into static prefix (cacheable) and dyn
 
 ```bash
 ANTHROPIC_API_KEY=sk-ant-your-key-here
-MAX_SESSION_COST=2.00      # Revised down from $5.00
+MAX_SESSION_COST=2.00
 COST_WARNING_THRESHOLD=0.80
 ```

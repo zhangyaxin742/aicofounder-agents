@@ -400,14 +400,12 @@ export function createCanvas(name: string): Canvas {
     idea: {},
     research: {},
     icp: {},
-    positioning: {},
     build: {},
-    legal: {},
     gtm: {},
-    fundraising: {},
     critic_reports: [],
     decisions: [],
     risks: {},
+    exports: {},
   };
 }
 
@@ -1343,11 +1341,10 @@ YOUR CURRENT PROJECT CANVAS:
 YOUR AVAILABLE AGENTS — invoke them using the tools provided:
 - run_research_phase: Market Scout + Competitor Analyst + Market Sizer run in parallel. Use when you need market grounding. Write a specific brief — not "research this space" but exactly which subreddits, which competitors, which pain points to validate.
 - run_icp_analysis: ICP Whisperer builds personas with behavioral signals, community locations, and WTP. Use after research confirms the market is real.
-- run_engineering_review: Architect researches stacks/costs first, then Technical Cofounder makes architecture and MVP scope decisions.
-- run_critic_legal_lens: Deprecated in sprint scope. Use run_critic with a legal-risk brief when product touches regulated data or novel IP.
-- run_gtm_planning: GTM + Fundraising Specialist produces week-by-week 90-day plan, monetization model, unit economics, named investors.
+- run_build_phase: Architect researches stacks/costs first, then Technical Cofounder makes architecture and MVP scope decisions.
+- run_gtm_planning: GTM Specialist produces the launch plan, monetization framing, and first-90-day execution sequence.
 - run_critic: The Critic red-teams everything. Finds kill-shot assumptions and the uncomfortable truths. Run this after phases 1, 2, and 3 at minimum.
-- update_canvas: Record decisions, positioning work, and synthesized findings. Use this to ensure nothing is lost between sessions.
+- update_canvas: Record decisions, intake refinements, and synthesized findings. Use this to ensure nothing is lost between sessions.
 
 EFFORT SCALING — embed this logic when writing agent briefs:
 - Simple clarification needed: ask the founder, no agent needed
@@ -1387,6 +1384,27 @@ WHAT YOU ARE NOT:
 ## File: `src/prompts/agents.ts`
 
 ```typescript
+const SPECIALIST_OUTPUT_CONTRACT = `
+Every specialist response must include:
+
+1. Human-readable markdown for the founder and orchestrator
+2. Machine-readable JSON inside <json_output> ... </json_output>
+
+Required JSON envelope:
+<json_output>
+{
+  "report_type": "agent_specific_type",
+  "summary": "one paragraph summary",
+  "findings": [],
+  "sources": [],
+  "confidence": "High|Medium|Low",
+  "open_questions": []
+}
+</json_output>
+
+The JSON payload is the parsing contract. Human-readable section headers are presentation only.
+`;
+
 // ─── Market Scout ─────────────────────────────────────────────────────────────
 
 export const SCOUT_SYSTEM_PROMPT = `You are a specialized market research agent. Your only job is to find what real people are actually saying about this problem online — unfiltered, specific, and cited. You never paraphrase when you can quote directly.
@@ -1657,7 +1675,7 @@ Reason: [where is the evidence thin? what would strengthen this ICP picture?]
 
 // ─── Architect + Technical Cofounder ──────────────────────────────────────────────────────────
 
-export const ENGINEER_SYSTEM_PROMPT = `You are a senior software architect and founding CTO who has shipped multiple products from zero to production. You think in systems, build lean, and have strong opinions about what to cut. You do not produce generic "use React and Postgres" templates — you give considered recommendations based on the actual product.
+export const ARCHITECT_SYSTEM_PROMPT = `You are a technical research specialist. Your job is to gather the factual build context the Technical Cofounder needs before making architecture judgments.
 
 YOU WILL BE GIVEN:
 - A <brief> with specific build questions to answer
@@ -1665,131 +1683,57 @@ YOU WILL BE GIVEN:
 
 YOUR RESEARCH MANDATE:
 Before making recommendations, search for:
-- How direct competitors are built (job postings, BuiltWith, engineering blogs, Stackshare)
+- how direct competitors are built (job postings, BuiltWith, engineering blogs, Stackshare)
 - "[competitor] tech stack" or "[competitor] engineering"
-- Any new APIs or infrastructure tools relevant to this specific product type
-- Community discussion on "[product type] SaaS architecture"
-- Pricing for key infrastructure choices at scale
+- infrastructure pricing for likely stack choices at multiple scales
+- any new APIs or hosted tools relevant to this specific product type
+- integration constraints and operational complexity signals
 
-OUTPUT FORMAT — return exactly this structure:
+HUMAN-READABLE REPORT:
+- competitor tech stacks and what they imply
+- recommended stack by layer
+- estimated infrastructure costs
+- build sequence for the first 6 weeks
+- open technical questions the Technical Cofounder still needs to judge
 
----
-BUILD PLANNING REPORT
-
-COMPETITOR TECH STACKS (researched):
-[What you found. What it reveals about their scalability, costs, or debt.]
-
-RECOMMENDED MVP STACK:
-Frontend: [recommendation + rationale specific to this product]
-Backend / API: [recommendation + rationale]
-Database: [recommendation + rationale]
-Auth: [recommendation + rationale]
-AI/ML layer (if applicable): [specific models, APIs, fine-tune or not, and why]
-Infrastructure / Hosting: [recommendation + rationale]
-Day 1 integrations (must-haves): [list]
-Post-launch integrations (V2): [list]
-
-ESTIMATED MONTHLY INFRA COST:
-Development (0 users): $[X]/mo
-1,000 users: $[X]/mo
-10,000 users: $[X]/mo
-100,000 users: $[X]/mo
-
-MVP SCOPE TABLE:
-| Feature | MVP? | V2? | Effort | Notes |
-|---|---|---|---|---|
-[Populate every row. Be ruthless about what's MVP. Effort = S/M/L]
-
-WHAT TO CUT:
-[Specific features the founder probably wants that you'd veto from MVP — and exactly why. Be direct.]
-
-TABLE STAKES (non-negotiables at launch to be taken seriously by the ICP):
-[List with brief justification]
-
-WINNING FEATURES (2–3 signature differentiators):
-Feature: [name]
-What it is: [description]
-Technical complexity: [Low / Medium / High — and why]
-Why it's defensible: [what makes it hard to copy in < 6 months]
-Expected impact: [conversion, retention, or NPS effect]
-
-TECHNICAL RISKS (top 3):
-1. [Risk]: [what it is, likelihood, mitigation]
-2. [Risk]: [same]
-3. [Risk]: [same]
-
-BUILD SEQUENCE (first 6 weeks):
-Weeks 1–2: [specific deliverables — what exists and is testable by end of week 2]
-Weeks 3–4: [specific deliverables]
-Weeks 5–6: [specific deliverables — what does "ready to show first users" look like?]
-
-CONFIDENCE LEVEL: [High / Medium / Low]
----`;
+APPEND THIS MACHINE-READABLE CONTRACT:
+${SPECIALIST_OUTPUT_CONTRACT}
+Use "report_type": "architect".`;
 
 // ─── Critic legal-risk lens ────────────────────────────────────────────────────────────
 
-export const LEGAL_SYSTEM_PROMPT = `You are a startup-focused attorney with deep experience in tech company formation, IP, SaaS terms, and regulatory compliance. You are not here to scare founders — you are here to flag real risks and give practical guidance so they can ask the right questions to a real lawyer.
-
-Important: you provide legal information, not legal advice. You do not tell founders they are in compliance or that something is legal — you surface what they need to know and what to act on.
+export const TECHNICAL_COFOUNDER_SYSTEM_PROMPT = `You are a founding CTO making judgment calls, not doing fresh web research. The Architect has already gathered stack and infrastructure context. Your job is to decide what should actually be built, what should be cut, and what hidden technical risks matter.
 
 YOU WILL BE GIVEN:
-- A <brief> with specific legal questions to investigate
-- A <canvas> with full product context
+- A <brief> with specific build questions to answer
+- A <canvas> with full product, ICP, and market context
+- Architect research already reflected in the build context
 
-YOUR RESEARCH MANDATE:
-Search for:
-- Regulatory requirements specific to this product type and jurisdiction
-- Competitor T&S / privacy policies (what protections do they have built in?)
-- Recent legal cases or regulatory actions in this space
-- IP landscape — any patents that could create problems?
-- "[product type] legal requirements", "[product type] compliance", "[space] regulatory risk"
-- Data handling requirements: GDPR, CCPA, HIPAA, COPPA — whichever applies
-- "[product type] terms of service must include" for community/legal guidance
+YOUR DECISION MANDATE:
+- choose the architecture direction
+- cut the MVP aggressively
+- decide build vs. buy
+- identify the real technical risks
+- define the critical user flow to first value
 
-OUTPUT FORMAT — return exactly this structure:
+HUMAN-READABLE REPORT:
+- architecture decision with rationale
+- ruthless MVP scope table
+- build-vs-buy decisions
+- top technical risks and mitigations
+- what breaks at scale
 
----
-CRITIC LEGAL-RISK REPORT
+APPEND THIS MACHINE-READABLE CONTRACT:
+${SPECIALIST_OUTPUT_CONTRACT}
+Use "report_type": "technical_cofounder". Web search is OFF.`;
 
-ENTITY STRUCTURE RECOMMENDATION:
-[LLC vs C-Corp, Delaware vs home state, and why for this specific situation]
-Key driver: [fundraising plans, equity grants, IP ownership, liability exposure]
+export const CRITIC_LEGAL_LENS_GUIDANCE = `When the orchestrator calls run_critic with lens=legal-risk, the Critic should additionally examine:
+- data handling exposure
+- IP and trademark risk
+- regulatory exposure by jurisdiction
+- contractual and policy gaps
 
-IP RISK ASSESSMENT:
-Patent landscape: [what did you find? any patents to watch?]
-Trade secret considerations: [what in the product approach needs protection?]
-Trademark: [name/brand conflicts? search results?]
-Recommended actions: [specific steps]
-
-REGULATORY EXPOSURE:
-[For each applicable regulatory area:]
-Area: [name]
-What it requires: [specific]
-Compliance complexity: [Low / Medium / High]
-Practical mitigation: [what to actually do]
-
-DATA & PRIVACY:
-User data this product will collect: [based on canvas]
-GDPR applicable: [Yes/No + reason]
-CCPA applicable: [Yes/No + reason]
-Special categories (health, financial, children's data): [flag any]
-Minimum viable privacy policy items: [specific list]
-Terms of service essentials for this product type: [specific list]
-
-COMPETITOR LEGAL PATTERNS:
-[What do competitor T&S / privacy policies reveal? What have they built in that we should copy or avoid?]
-
-TOP 3 LEGAL RISKS:
-1. [Risk]: [what it is + likelihood + mitigation]
-2. [Risk]: [same]
-3. [Risk]: [same]
-
-PRE-LAUNCH LEGAL CHECKLIST:
-[Ordered list of specific actions — what to do and when]
-
-CONFIDENCE LEVEL: [High / Medium / Low]
-[Explicitly flag areas where a real lawyer is strongly recommended]
----`;
+This is risk flagging only. It does not create a standalone legal agent and it does not constitute legal advice.`;
 
 // ─── GTM + Fundraising Specialist ─────────────────────────────────────────────
 
@@ -1968,9 +1912,8 @@ to agents and synthesize their findings into decisions.
 ## Available Agents
 - run_research_phase: Scout + Analyst + Sizer in parallel
 - run_icp_analysis: ICP Whisperer
-- run_engineering_review: Architect + Technical Cofounder
-- run_critic_legal_lens: deprecated; use Critic legal-risk lens
-- run_gtm_planning: GTM + Fundraising Specialist
+- run_build_phase: Architect + Technical Cofounder
+- run_gtm_planning: GTM Specialist
 - run_critic: The Critic (red-team)
 - update_canvas: Persist decisions and findings
 
@@ -2074,7 +2017,7 @@ Build this system in layers. Debugging an orchestrator that talks to five agents
 
 **Week 1 — Single agent, no orchestrator**
 
-Get `run-agent.ts` working. Hardcode a brief, call the Scout directly, print the output. Iterate on the Scout's system prompt until the output format is exactly right — all required section headers present, quotes are real, confidence level is stated. Do not touch the orchestrator.
+Get `run-agent.ts` working. Hardcode a brief, call the Scout directly, print the output. Iterate until the structured `<json_output>` block parses cleanly, the human-readable report is useful, source attribution is present, and the Verifier would pass it. Do not touch the orchestrator.
 
 ```bash
 # Temporary test script: src/test-scout.ts
@@ -2089,7 +2032,7 @@ const report = await runAgent({
 console.log(report);
 ```
 
-Repeat for Analyst and Sizer individually. Validate output format and header presence manually.
+Repeat for Analyst and Sizer individually. Validate structured output extraction and source presence manually before wiring them into fan-out.
 
 **Week 2 — Fan-out, no orchestrator**
 
@@ -2101,9 +2044,9 @@ Add the orchestrator. Wire up the tool handlers. At this point the loop is: user
 
 Test edge case: send two messages in a row that would both trigger research. Confirm the second call doesn't re-run the fan-out (phase guard in tool description should prevent this, but verify it in practice).
 
-**Week 4 — Domain agents (ICP, Engineer, GTM, Critic)**
+**Week 4 — Domain agents (ICP, Architect, Technical Cofounder, GTM, Critic)**
 
-Add the sequential agents one at a time. Add ICP first (it builds on research), test the brief it receives actually contains the Scout's findings via the canvas. Add the Critic last — its prompt requires the most tuning because it needs to push back specifically, not generically.
+Add the sequential agents one at a time. Add ICP first (it builds on research), then add Architect and Technical Cofounder as the build-phase pair, then GTM, then Critic. Test that Architect receives research + ICP context, that Technical Cofounder receives the Architect's report without fresh web search, and add the Critic last because its prompt requires the most tuning to push back specifically rather than generically.
 
 **Week 5 — Verifier, cost tracking, `/export`**
 
@@ -2276,7 +2219,7 @@ export async function runResearchFanOut(
 
 /**
  * Generic single-agent run with verification.
- * Use for ICP, Engineer, Legal, GTM — any phase where a single
+ * Use for ICP, Architect, Technical Cofounder, GTM, or Critic — any phase where a single
  * subagent returns a report that should be audited.
  */
 export async function runAgentWithVerification(
@@ -2474,11 +2417,11 @@ YOUR AVAILABLE AGENTS (updated):
 - competitor_analyst: Competitor mapping, pricing, complaints
 - market_sizer: TAM/SAM/SOM, market structure, funding data
 - icp_whisperer: Persona building, willingness-to-pay, where to find them
-- senior_engineer: MVP stack, build sequence, technical tradeoffs
-- legal_advisor: IP risk, regulatory exposure, entity structure
-- gtm_specialist: Distribution strategy, first 90 days, investor targeting
-- the_critic: Red-team, kill-shot assumptions, adversarial pressure
-- verifier: Factual audit of any agent report (auto-invoked, you don't need to call this manually)
+- architect: stack, integration, and infrastructure research
+- technical_cofounder: architecture judgment, MVP cuts, build-vs-buy, technical risks
+- gtm_specialist: distribution strategy, first 90 days, monetization framing
+- the_critic: Red-team, kill-shot assumptions, adversarial pressure, optional legal-risk lens
+- verifier: contract and source audit of any agent report (auto-invoked, you don't need to call this manually)
 ```
 
 ---
@@ -2518,62 +2461,6 @@ export function buildVerificationMetadata(
     last_verified: new Date().toISOString(),
   };
 }
-```
-
----
-
-### Updated Repo Structure (with Verifier)
-
-```
-cofounder-swarm/
-├── README.md
-├── .env.example
-├── package.json
-├── tsconfig.json
-│
-├── src/
-│   ├── index.ts
-│   ├── orchestrator.ts        (modified — reads verification audits)
-│   ├── agents/
-│   │   ├── scout.ts
-│   │   ├── analyst.ts
-│   │   ├── sizer.ts
-│   │   ├── icp.ts
-│   │   ├── engineer.ts
-│   │   ├── legal.ts
-│   │   ├── gtm.ts
-│   │   ├── critic.ts
-│   │   └── verifier.ts        ← NEW
-│   ├── prompts/
-│   │   ├── orchestrator.ts    (modified — verification context added)
-│   │   └── agents.ts          (modified — VERIFIER_SYSTEM_PROMPT added,
-│   │                            sourcing rules added to all agents)
-│   ├── canvas/
-│   │   ├── schema.ts          (modified — VerificationMetadata type added)
-│   │   ├── read.ts
-│   │   └── write.ts           (modified — buildVerificationMetadata helper)
-│   └── lib/
-│       ├── run-agent.ts
-│       ├── fan-out.ts          (modified — verification pass after research)
-│       └── export.ts
-│
-├── canvas/
-│   └── .gitkeep
-│
-├── output/
-│   └── .gitkeep
-│
-└── prompts/
-    ├── orchestrator.md         (modified — verification context added)
-    ├── scout.md                (modified — sourcing rules added)
-    ├── analyst.md              (modified — sourcing rules added)
-    ├── sizer.md                (modified — sourcing rules added)
-    ├── icp.md                  (modified — sourcing rules added)
-    ├── engineer.md             (modified — sourcing rules added)
-    ├── legal.md                (modified — sourcing rules added)
-    ├── gtm.md                  (modified — sourcing rules added)
-    ├── critic.md               (unchanged)
-    └── verifier.md             ← NEW
 ```
 
 ---
@@ -2692,11 +2579,12 @@ export function buildCanvasContext(
     | 'orchestrator'
     | 'research'
     | 'icp'
-    | 'engineer'
-    | 'legal'
+    | 'architect'
+    | 'technical_cofounder'
     | 'gtm'
     | 'critic'
     | 'verifier'
+    | 'export_agent'
 ): string {
   switch (agentType) {
     case 'orchestrator':
@@ -2716,19 +2604,17 @@ export function buildCanvasContext(
             primary_icp: canvas.icp?.primary_icp,
             willingness_to_pay: canvas.icp?.willingness_to_pay,
           },
-          positioning: canvas.positioning,
           build: {
-            summary: canvas.build?.summary,
+            architect_summary: canvas.build?.architect_summary,
+            technical_summary: canvas.build?.technical_summary,
             mvp_scope: canvas.build?.mvp_scope,
-            recommended_stack: canvas.build?.recommended_stack,
           },
-          legal: { summary: canvas.legal?.summary, risks: canvas.legal?.risks },
           gtm: {
             summary: canvas.gtm?.summary,
             primary_channel: canvas.gtm?.primary_channel,
             monetization_model: canvas.gtm?.monetization_model,
           },
-          fundraising: canvas.fundraising,
+          critic_reports: canvas.critic_reports,
           decisions: canvas.decisions?.slice(-10), // Last 10 decisions
           risks: canvas.risks,
         },
@@ -2759,7 +2645,7 @@ export function buildCanvasContext(
         2
       );
 
-    case 'engineer':
+    case 'architect':
       return JSON.stringify(
         {
           project: canvas.project,
@@ -2769,19 +2655,25 @@ export function buildCanvasContext(
             summary: canvas.icp?.summary,
             primary_icp: canvas.icp?.primary_icp,
           },
-          positioning: canvas.positioning,
         },
         null,
         2
       );
 
-    case 'legal':
+    case 'technical_cofounder':
       return JSON.stringify(
         {
           project: canvas.project,
           idea: canvas.idea,
-          build: { summary: canvas.build?.summary },
-          positioning: { thesis: canvas.positioning?.thesis },
+          research: { summaries: canvas.research?.summaries },
+          icp: {
+            summary: canvas.icp?.summary,
+            primary_icp: canvas.icp?.primary_icp,
+          },
+          build: {
+            architect_summary: canvas.build?.architect_summary,
+            architect_report: canvas.build?.architect_report,
+          },
         },
         null,
         2
@@ -2798,9 +2690,9 @@ export function buildCanvasContext(
             market_size: canvas.research?.market_size,
           },
           icp: canvas.icp,
-          positioning: canvas.positioning,
           build: {
-            summary: canvas.build?.summary,
+            architect_summary: canvas.build?.architect_summary,
+            technical_summary: canvas.build?.technical_summary,
             mvp_scope: canvas.build?.mvp_scope,
           },
         },
@@ -2810,6 +2702,10 @@ export function buildCanvasContext(
 
     case 'critic':
       // Critic gets EVERYTHING — raw reports + summaries + full canvas
+      return JSON.stringify(canvas, null, 2);
+
+    case 'export_agent':
+      // Export Agent also gets the full canvas so it can render the final brief
       return JSON.stringify(canvas, null, 2);
 
     case 'verifier':
@@ -2853,14 +2749,12 @@ icp: {
 };
 
 build: {
-  raw_report?: string;
-  summary?: string;    // ← NEW
-  // ... existing fields
-};
-
-legal: {
-  raw_report?: string;
-  summary?: string;    // ← NEW
+  architect_report?: string;
+  architect_summary?: string;
+  technical_report?: string;
+  technical_summary?: string;
+  raw_report?: string; // backward-compatible alias for the final technical report
+  summary?: string;    // backward-compatible alias for the final technical summary
   // ... existing fields
 };
 
@@ -2930,12 +2824,12 @@ const AGENT_TIMEOUTS: Record<string, number> = {
   competitor_analyst: 90_000,
   market_sizer: 90_000,
   icp_whisperer: 90_000,
-  senior_engineer: 60_000,
-  legal_advisor: 60_000,
+  architect: 60_000,
+  technical_cofounder: 60_000,
   gtm_specialist: 90_000,
   the_critic: 60_000,
   verifier: 15_000,
-  summarizer: 15_000,
+  export_agent: 15_000,
 };
 
 // ─── Core Agent Runner ───────────────────────────────────────────────────────
@@ -3415,7 +3309,7 @@ import chalk from 'chalk';
 import * as readline from 'readline';
 import { getSessionCost, getSessionState } from './telemetry.js';
 
-const MAX_SESSION_COST = parseFloat(process.env.MAX_SESSION_COST ?? '5.00');
+const MAX_SESSION_COST = parseFloat(process.env.MAX_SESSION_COST ?? '2.00');
 const WARNING_THRESHOLD = parseFloat(process.env.COST_WARNING_THRESHOLD ?? '0.80');
 
 let budgetWarningShown = false;
@@ -3625,81 +3519,6 @@ writeSessionSummary(false);
 
 ---
 
-### Updated Repo Structure (Cumulative — All Appendices)
-
-```
-cofounder-swarm/
-├── .env.example                (modified — budget vars added)
-├── README.md
-├── package.json
-├── tsconfig.json
-│
-├── src/
-│   ├── index.ts                (modified — /cost command, telemetry init,
-│   │                            budget error handling)
-│   ├── orchestrator.ts         (modified — reads verification audits,
-│   │                            uses context-builder for canvas injection)
-│   ├── agents/
-│   │   ├── scout.ts
-│   │   ├── analyst.ts
-│   │   ├── sizer.ts
-│   │   ├── icp.ts
-│   │   ├── engineer.ts
-│   │   ├── legal.ts
-│   │   ├── gtm.ts
-│   │   ├── critic.ts
-│   │   └── verifier.ts         ← Added in Appendix A
-│   ├── prompts/
-│   │   ├── orchestrator.ts     (modified — verification context)
-│   │   └── agents.ts           (modified — VERIFIER_SYSTEM_PROMPT,
-│   │                            sourcing rules for all agents)
-│   ├── canvas/
-│   │   ├── schema.ts           (modified — VerificationMetadata,
-│   │                            summary fields on all sections)
-│   │   ├── read.ts
-│   │   └── write.ts            (modified — buildVerificationMetadata)
-│   └── lib/
-│       ├── run-agent.ts        ← REWRITTEN: retry + fallback + timeout
-│       │                         + telemetry + budget gate
-│       ├── fan-out.ts          ← REWRITTEN: Promise.allSettled +
-│       │                         verify + summarize pipeline
-│       ├── export.ts
-│       ├── summarize.ts        ← NEW: Haiku summarization for reports
-│       │                         and conversation history
-│       ├── context-builder.ts  ← NEW: Per-agent canvas injection
-│       │                         strategy (context isolation)
-│       ├── telemetry.ts        ← NEW: JSONL logging, session state,
-│       │                         cost tracking, session summaries
-│       └── budget.ts           ← NEW: Session budget cap, warning
-│                                 threshold, interactive pause
-│
-├── canvas/
-│   └── .gitkeep
-│
-├── output/
-│   └── .gitkeep
-│
-├── logs/                        ← NEW (auto-created)
-│   ├── telemetry/               ← JSONL per-call logs
-│   │   └── [slug]-[date].jsonl
-│   └── session-summary/         ← JSON per-session summaries
-│       └── [slug]-[date]-[id].json
-│
-└── prompts/
-    ├── orchestrator.md
-    ├── scout.md
-    ├── analyst.md
-    ├── sizer.md
-    ├── icp.md
-    ├── engineer.md
-    ├── legal.md
-    ├── gtm.md
-    ├── critic.md
-    └── verifier.md
-```
-
----
-
 ## Appendix E: Tool Design Specificity — Search Heuristic Blocks
 
 ### Modifications to `src/prompts/agents.ts`
@@ -3881,16 +3700,14 @@ export interface Canvas {
     name: string;
     created_at: string;
     phase:
-      | 'warmup'       // ← NEW: Pre-intake idea sharpening
-      | 'warmup'
+      | 'warmup'       // â† NEW: Pre-intake idea sharpening
       | 'intake'
       | 'research'
       | 'icp'
-      | 'positioning'
       | 'build'
       | 'gtm'
-      | 'fundraising'
-      | 'launched';
+      | 'critic'
+      | 'exported';
   };
   // ... rest of schema unchanged
 }
@@ -3912,14 +3729,12 @@ export function createCanvas(name: string): Canvas {
     idea: {},             // Stays empty until Phase 0
     research: {},
     icp: {},
-    positioning: {},
     build: {},
-    legal: {},
     gtm: {},
-    fundraising: {},
     critic_reports: [],
     decisions: [],
     risks: {},
+    exports: {},
   };
 }
 ```
@@ -4055,76 +3870,6 @@ function printHelp(): void {
 }
 ```
 
-### Updated Repo Structure (Cumulative — All Appendices)
-
-```
-cofounder-swarm/
-├── .env.example                (modified — budget vars)
-├── README.md
-├── package.json
-├── tsconfig.json
-│
-├── src/
-│   ├── index.ts                (modified — warm-up messaging, /phase command)
-│   ├── orchestrator.ts         (modified — phase-aware tool availability,
-│   │                            warm-up→intake transition)
-│   ├── agents/
-│   │   ├── scout.ts
-│   │   ├── analyst.ts
-│   │   ├── sizer.ts
-│   │   ├── icp.ts
-│   │   ├── engineer.ts
-│   │   ├── legal.ts
-│   │   ├── gtm.ts
-│   │   ├── critic.ts
-│   │   └── verifier.ts
-│   ├── prompts/
-│   │   ├── orchestrator.ts     (modified — warm-up sharpening instructions,
-│   │   │                        verification context)
-│   │   └── agents.ts           (modified — search heuristic blocks added
-│   │                            to Scout, Analyst, Sizer, ICP, GTM;
-│   │                            VERIFIER_SYSTEM_PROMPT; sourcing rules)
-│   ├── canvas/
-│   │   ├── schema.ts           (modified — 'warmup' phase added,
-│   │   │                        VerificationMetadata, summary fields)
-│   │   ├── read.ts             (modified — createCanvas starts at 'warmup')
-│   │   └── write.ts            (modified — buildVerificationMetadata)
-│   └── lib/
-│       ├── run-agent.ts        (rewritten — retry + fallback + timeout
-│       │                        + telemetry + budget gate)
-│       ├── fan-out.ts          (rewritten — Promise.allSettled +
-│       │                        verify + summarize)
-│       ├── export.ts
-│       ├── summarize.ts        (Haiku report + conversation compression)
-│       ├── context-builder.ts  (per-agent canvas injection)
-│       ├── telemetry.ts        (JSONL logging, session cost tracking)
-│       └── budget.ts           (session budget cap, interactive pause)
-│
-├── canvas/
-│   └── .gitkeep
-│
-├── output/
-│   └── .gitkeep
-│
-├── logs/
-│   ├── telemetry/
-│   │   └── [slug]-[date].jsonl
-│   └── session-summary/
-│       └── [slug]-[date]-[id].json
-│
-└── prompts/
-    ├── orchestrator.md         (modified — warm-up + verification context)
-    ├── scout.md                (modified — heuristics + sourcing rules)
-    ├── analyst.md              (modified — heuristics + sourcing rules)
-    ├── sizer.md                (modified — heuristics + sourcing rules)
-    ├── icp.md                  (modified — heuristics + sourcing rules)
-    ├── engineer.md             (modified — sourcing rules)
-    ├── legal.md                (modified — sourcing rules)
-    ├── gtm.md                  (modified — heuristics + sourcing rules)
-    ├── critic.md               (unchanged)
-    └── verifier.md
-```
-
 ---
 
 ## Appendix G: The Deferred knowledge extraction - Cross-Project Knowledge Persistence
@@ -4154,29 +3899,12 @@ const PATTERN_FILES = [
 
 /**
  * Historical appendix only. Pattern extraction is deferred from sprint scope.
- * Extracts reusable patterns and appends them to the local knowledge base.
- *
- * Called after /export completes successfully.
- * Cost: ~$0.03–0.08 (one Sonnet call with full canvas)
+ * It is intentionally NOT called by the sprint export flow and NOT part of the
+ * active repo tree for the shipping MVP.
  */
 export async function runPatternExtraction(canvas: Canvas): Promise<void> {
-  // Ensure knowledge directory exists
-  if (!fs.existsSync(KNOWLEDGE_DIR)) {
-    fs.mkdirSync(KNOWLEDGE_DIR, { recursive: true });
-  }
-
-  const result = await runAgent({
-    systemPrompt: LIBRARIAN_SYSTEM_PROMPT,
-    userMessage: `<canvas>\n${JSON.stringify(canvas, null, 2)}\n</canvas>`,
-    agentName: 'pattern_librarian',
-    model: 'claude-sonnet-4-6',
-    maxTokens: 4000,
-    webSearch: false, // No web search — extraction only
-  });
-
-  // Parse the structured output and write to JSONL files
-  const patterns = parseLibrarianOutput(result.text, canvas);
-  writePatterns(patterns);
+  void canvas;
+  throw new Error('Pattern extraction is deferred from sprint scope.');
 }
 
 interface ExtractedPattern {
@@ -4438,7 +4166,7 @@ function evaluatePhaseResults(
 
 ---
 
-## Appendix I: Export Quality — The Synthesis Agent
+## Appendix I: Export Quality — The Export Agent Final Pass
 
 ### File: `src/agents/export-agent.ts`
 
@@ -4448,23 +4176,26 @@ import { EXPORT_AGENT_SYSTEM_PROMPT } from '../prompts/agents.js';
 import type { Canvas } from '../canvas/schema.js';
 
 /**
- * Runs the Synthesis Agent to produce an structured founder-facing research brief
+ * Runs the Export Agent to produce a structured founder-facing research brief
  * formatted exactly to the /startup-research template spec.
  *
  * Called during /export, replacing the simple assembleBrief() string concat.
  * Cost: ~$0.05–0.10 (one Sonnet call, ~4K input tokens, ~8K output tokens)
  */
-export async function runSynthesisAgent(canvas: Canvas): Promise<string> {
+export async function runExportAgent(canvas: Canvas): Promise<{ markdown: string; structured: unknown }> {
   const result = await runAgent({
     systemPrompt: EXPORT_AGENT_SYSTEM_PROMPT,
-    userMessage: buildSynthesisInput(canvas),
-    agentName: 'export_agent',
+    userMessage: buildExportInput(canvas),
+    agentName: 'export-agent',
     model: 'claude-sonnet-4-6',
     maxTokens: 12000,
-    webSearch: false, // Synthesis only — no new research
+    webSearch: false, // Export only — no new research
   });
 
-  return result.text;
+  return {
+    markdown: result.markdown,
+    structured: result.structured,
+  };
 }
 
 /**
@@ -4472,7 +4203,7 @@ export async function runSynthesisAgent(canvas: Canvas): Promise<string> {
  * Includes raw reports (not just summaries) because the Export Agent
  * needs maximum detail to produce the complete template.
  */
-function buildSynthesisInput(canvas: Canvas): string {
+function buildExportInput(canvas: Canvas): string {
   return [
     `<project_name>${canvas.project.name}</project_name>`,
     `<phase>${canvas.project.phase}</phase>`,
@@ -4480,7 +4211,7 @@ function buildSynthesisInput(canvas: Canvas): string {
     JSON.stringify(canvas, null, 2),
     `</canvas>`,
     ``,
-    `Produce a complete research brief following your template exactly.`,
+    `Produce a complete founder-facing research brief following your template exactly.`,
     `Every section must be present. Every table must be populated.`,
     `If data is missing for a section, write "[Data gap — not covered in research]".`,
     `Do NOT invent data. Only use what is in the canvas.`,
@@ -4490,7 +4221,7 @@ function buildSynthesisInput(canvas: Canvas): string {
 
 ---
 
-### File: `src/lib/export.ts` — Updated with Synthesis Agent
+### File: `src/lib/export.ts` — Updated with Export Agent
 
 ```typescript
 import * as fs from 'fs';
@@ -4498,16 +4229,14 @@ import * as path from 'path';
 import chalk from 'chalk';
 import type { Canvas } from '../canvas/schema.js';
 import { runExportAgent } from '../agents/export-agent.js';
-import { runPatternExtraction } from '../agents/librarian.js';
 
 const OUTPUT_DIR = path.join(process.cwd(), 'output');
 
 /**
  * Export flow (updated):
- * 1. Run Synthesis Agent → produces template-formatted brief
+ * 1. Run Export Agent → produces template-formatted brief
  * 2. Write brief to /output
- * 3. [Deferred from sprint scope]
- * 4. Return file path
+ * 3. Return file path
  */
 export async function exportBrief(canvas: Canvas, slug: string): Promise<string> {
   if (!fs.existsSync(OUTPUT_DIR)) {
@@ -4518,29 +4247,19 @@ export async function exportBrief(canvas: Canvas, slug: string): Promise<string>
   const filename = `${slug}-brief-${date}.md`;
   const filePath = path.join(OUTPUT_DIR, filename);
 
-  // Step 1: Run Synthesis Agent for template-formatted brief
-  console.log(chalk.yellow('\n  Synthesizing research brief...\n'));
-  const brief = await runSynthesisAgent(canvas);
+  // Step 1: Run Export Agent for template-formatted brief
+  console.log(chalk.yellow('\n  Running Export Agent...\n'));
+  const result = await runExportAgent(canvas);
 
   // Step 2: Write to file
-  fs.writeFileSync(filePath, brief, 'utf-8');
+  fs.writeFileSync(filePath, result.markdown, 'utf-8');
   console.log(chalk.green(`  ✓ Brief exported → ${filePath}`));
-
-  // Step 3: [Deferred from sprint scope]
-  try {
-    console.log(chalk.yellow('  Extracting patterns for knowledge base...'));
-    await runPatternExtraction(canvas);
-    console.log(chalk.green('  ✓ Patterns extracted to knowledge/\n'));
-  } catch (err) {
-    // Pattern extraction is non-critical — don't fail the export
-    console.log(chalk.gray('  ⚠ Pattern extraction skipped (non-critical)\n'));
-  }
 
   return filePath;
 }
 
 /**
- * Fallback: simple canvas dump (used if synthesis agent fails).
+ * Fallback: simple canvas dump (used if Export Agent fails).
  * This is the original assembleBrief logic, kept as a safety net.
  */
 export function assembleBriefFallback(canvas: Canvas): string {
@@ -4564,7 +4283,8 @@ export function assembleBriefFallback(canvas: Canvas): string {
   }
 
   if (canvas.icp?.raw_report) parts.push(`## ICP Report\n\n${canvas.icp.raw_report}`);
-  if (canvas.build?.raw_report) parts.push(`## Build Report\n\n${canvas.build.raw_report}`);
+  if (canvas.build?.architect_report) parts.push(`## Architect Report\n\n${canvas.build.architect_report}`);
+  if (canvas.build?.technical_report) parts.push(`## Technical Cofounder Report\n\n${canvas.build.technical_report}`);
   if (canvas.gtm?.raw_report) parts.push(`## GTM Report\n\n${canvas.gtm.raw_report}`);
 
   parts.push('\n---\n\n*Raw export by Cofounder Agent Swarm*');
@@ -4604,84 +4324,6 @@ export interface Scorecard {
 // Add to Canvas interface:
 //   scorecard?: Scorecard;   ← NEW
 ```
-
----
-
-### Updated Repo Structure (Cumulative — All Appendices A–I)
-
-```
-cofounder-swarm/
-├── .env.example
-├── README.md
-├── package.json
-├── tsconfig.json
-│
-├── src/
-│   ├── index.ts
-│   ├── orchestrator.ts         (checkpoint evaluation logic added)
-│   ├── agents/
-│   │   ├── scout.ts
-│   │   ├── analyst.ts
-│   │   ├── sizer.ts
-│   │   ├── icp.ts
-│   │   ├── engineer.ts
-│   │   ├── legal.ts
-│   │   ├── gtm.ts
-│   │   ├── critic.ts
-│   │   ├── verifier.ts
-│   │   ├── export-agent.ts     ← NEW (Appendix I)
-│   │   └── librarian.ts        ← NEW (Appendix G)
-│   ├── prompts/
-│   │   ├── orchestrator.ts     (checkpoint behavior added)
-│   │   └── agents.ts           (EXPORT_AGENT prompt added; knowledge extraction deferred)
-│   ├── canvas/
-│   │   ├── schema.ts           (Scorecard type added)
-│   │   ├── read.ts
-│   │   └── write.ts
-│   └── lib/
-│       ├── run-agent.ts
-│       ├── fan-out.ts
-│       ├── export.ts           ← REWRITTEN: Synthesis Agent + Pattern
-│       │                         Librarian pipeline replaces string concat
-│       ├── summarize.ts
-│       ├── context-builder.ts
-│       ├── telemetry.ts
-│       └── budget.ts
-│
-├── canvas/
-│   └── .gitkeep
-│
-├── output/
-│   └── .gitkeep
-│
-├── logs/
-│   ├── telemetry/
-│   └── session-summary/
-│
-├── knowledge/                   ← Deferred from sprint scope
-│   ├── pricing-patterns.jsonl
-│   ├── icp-archetypes.jsonl
-│   ├── competitor-intel.jsonl
-│   ├── market-benchmarks.jsonl
-│   ├── tech-patterns.jsonl
-│   ├── success-failure-signals.jsonl
-│   └── gtm-playbooks.jsonl
-│
-└── prompts/
-    ├── orchestrator.md
-    ├── scout.md
-    ├── analyst.md
-    ├── sizer.md
-    ├── icp.md
-    ├── engineer.md
-    ├── legal.md
-    ├── gtm.md
-    ├── critic.md
-    ├── verifier.md
-├── export-agent.md          ← NEW
-    └── librarian.md             ← NEW
-```
-
 ---
 
 ## Appendix J: Agent Roster Optimization & Cost Architecture — Implementation
@@ -4708,7 +4350,7 @@ export async function runTechnicalCofounder(
   canvas: Canvas,
   architectReport: string
 ): Promise<AgentResult> {
-  const canvasContext = buildCanvasContext(canvas, 'engineer');
+  const canvasContext = buildCanvasContext(canvas, 'technical_cofounder');
 
   const userMessage = [
     `<brief>${brief}</brief>`,
@@ -4750,7 +4392,7 @@ export async function runArchitect(
   brief: string,
   canvas: Canvas
 ): Promise<AgentResult> {
-  const canvasContext = buildCanvasContext(canvas, 'engineer');
+  const canvasContext = buildCanvasContext(canvas, 'architect');
 
   return runAgent({
     systemPrompt: ARCHITECT_SYSTEM_PROMPT,
@@ -4961,8 +4603,8 @@ function selectOrchestratorModel(
   if (lastAction === 'icp_complete') return 'claude-opus-4-6';
   if (lastAction === 'critic_complete') return 'claude-opus-4-6';
 
-  // Opus for positioning work (deep product judgment)
-  if (canvas.project.phase === 'positioning') return 'claude-opus-4-6';
+  // Opus for build work (deep product and technical judgment)
+  if (canvas.project.phase === 'build') return 'claude-opus-4-6';
 
   // Sonnet for everything else
   return 'claude-sonnet-4-6';
@@ -4979,7 +4621,7 @@ const model = selectOrchestratorModel(canvas, lastAction);
 The build phase now runs two agents in sequence:
 
 ```typescript
-// In the orchestrator tool handler for run_engineering_review:
+// In the orchestrator tool handler for run_build_phase:
 
 // Step 1: Architect researches (Sonnet, web search ON)
 const architectResult = await runArchitect(brief, canvas);
@@ -5008,9 +4650,9 @@ canvas.build = {
 
 ---
 
-### Merged Export Agent - Replaces Export Agent + Deferred knowledge extraction
+### Export Agent - Final Sprint Export Path
 
-> Sprint note: The active Export Agent handles final brief generation only. Pattern extraction and a knowledge base are deferred from sprint scope.
+> Sprint note: The active Export Agent handles final brief generation only. Pattern extraction and a knowledge base remain deferred from sprint scope and are not part of the shipping export path.
 
 Update `src/agents/export-agent.ts`:
 
@@ -5021,73 +4663,26 @@ import * as fs from 'fs';
 import * as path from 'path';
 import type { Canvas } from '../canvas/schema.js';
 
-const KNOWLEDGE_DIR = path.join(process.cwd(), 'knowledge');
-
 /**
  * The Export Agent - single Sonnet call that produces the final markdown brief:
  * 1. A complete structured founder-facing brief (formatted to the research template)
- * 2. [Deferred from sprint scope]
- *
- * Replaces the standalone Export Agent in sprint scope. Pattern extraction is deferred.
  * Cost: ~$0.06 (one Sonnet call, ~5K input, ~10K output)
  */
 export async function runExportAgent(
   canvas: Canvas
-): Promise<{ brief: string; patterns: string }> {
+): Promise<{ markdown: string; structured: Record<string, unknown> }> {
   const result = await runAgent({
     systemPrompt: EXPORT_AGENT_SYSTEM_PROMPT,
-    userMessage: `<canvas>\n${JSON.stringify(canvas, null, 2)}\n</canvas>`,
-    agentName: 'export_agent',
+    brief: 'Produce the final founder-facing export from the current canvas.',
+    canvas,
+    agent: 'export-agent',
     model: 'claude-sonnet-4-6',
-    maxTokens: 14000,
-    webSearch: false,
+    maxTokens: 14000
   });
-
-  // Split output at the delimiter
-  const text = result.text;
-  const delimiterIndex = text.indexOf('===PATTERNS===');
-
-  if (delimiterIndex === -1) {
-    // No patterns section — return brief only
-    return { brief: text, patterns: '' };
-  }
-
-  const brief = text.slice(0, delimiterIndex).trim();
-  const patterns = text.slice(delimiterIndex + '===PATTERNS==='.length).trim();
-
-  // Write patterns to knowledge base
-  if (patterns) {
-    writePatterns(patterns, canvas);
-  }
-
-  return { brief, patterns };
-}
-
-function writePatterns(patternsJson: string, canvas: Canvas): void {
-  if (!fs.existsSync(KNOWLEDGE_DIR)) {
-    fs.mkdirSync(KNOWLEDGE_DIR, { recursive: true });
-  }
-
-  try {
-    const parsed = JSON.parse(
-      patternsJson.replace(/```json\n?/g, '').replace(/```\n?/g, '').trim()
-    );
-
-    if (Array.isArray(parsed.patterns)) {
-      for (const p of parsed.patterns) {
-        const filename = `${p.category ?? 'misc'}.jsonl`;
-        const filePath = path.join(KNOWLEDGE_DIR, filename);
-        const entry = {
-          extracted_at: new Date().toISOString(),
-          source_project: canvas.project.name,
-          ...p,
-        };
-        fs.appendFileSync(filePath, JSON.stringify(entry) + '\n', 'utf-8');
-      }
-    }
-  } catch {
-    // Pattern parsing failure is non-critical
-  }
+  return {
+    markdown: result.markdown,
+    structured: result.structured,
+  };
 }
 ```
 
@@ -5098,34 +4693,16 @@ function writePatterns(patternsJson: string, canvas: Canvas): void {
 Add to `src/prompts/agents.ts`:
 
 ```typescript
-export const EXPORT_AGENT_SYSTEM_PROMPT = `You have two jobs in a single response:
+export const EXPORT_AGENT_SYSTEM_PROMPT = `Produce a complete founder-facing research brief from the canvas data, formatted to the export template.
 
-JOB 1: Produce a complete structured founder-facing research brief from the canvas data,
-formatted exactly to the template structure below.
+You are not doing new research. Use only what is already in the canvas.
 
-JOB 2: After the brief, output ===PATTERNS=== on its own line, then a JSON
-object containing reusable patterns extracted from this project.
+Return:
+1. Human-readable markdown for the exported brief
+2. Machine-readable JSON inside <json_output> ... </json_output>
 
-[The full EXPORT_AGENT_SYSTEM_PROMPT template goes here — all 6 sections +
-scorecard, as defined in Section 21 / Appendix I. Not duplicated for brevity.]
-
-After the complete brief, output exactly this delimiter:
-
-===PATTERNS===
-
-Then output valid JSON (no markdown fences) with extracted patterns:
-{
-  "patterns": [
-    {
-      "category": "pricing-patterns|icp-archetypes|competitor-intel|market-benchmarks|tech-patterns|success-failure-signals|gtm-playbooks",
-      "pattern": "concise reusable insight",
-      "confidence": "High|Medium|Low"
-    }
-  ]
-}
-
-Extract 5–15 patterns. Anonymize project-specific details.
-Only extract what's actually in the canvas — do not invent patterns.`;
+The JSON should contain export metadata, completion flags, and any scorecard fields the template requires.
+Do not emit pattern extraction payloads.`;
 ```
 
 ---
@@ -5207,7 +4784,7 @@ cofounder-swarm/
 │   │   ├── gtm.ts
 │   │   ├── critic.ts               (now includes legal lens)
 │   │   ├── verifier.ts
-│   │   └── export-agent.ts         ← NEW (merged synth + librarian)
+│   │   └── export-agent.ts         ← NEW (final brief generation only)
 │   ├── prompts/
 │   │   ├── orchestrator.ts
 │   │   └── agents.ts               (TC + Architect + Export Agent prompts)
@@ -5229,7 +4806,6 @@ cofounder-swarm/
 ├── logs/
 │   ├── telemetry/
 │   └── session-summary/
-├── knowledge/                      (cross-project patterns)
 │
 └── prompts/
     ├── orchestrator.md
