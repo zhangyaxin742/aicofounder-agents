@@ -1,0 +1,95 @@
+{
+  "projectName": "task-2-autosave",
+  "projectSlug": "task-2-autosave",
+  "phase": "critic",
+  "createdAt": "2026-04-02T23:59:14.136Z",
+  "lastOpenedAt": "2026-04-02T23:59:14.136Z",
+  "idea": "AI bookkeeping copilot for solo accountants",
+  "updatedAt": "2026-04-02T23:59:14.184Z",
+  "conversation": [
+    {
+      "role": "user",
+      "message": "AI bookkeeping copilot for solo accountants",
+      "at": "2026-04-02T23:59:14.145Z"
+    },
+    {
+      "role": "assistant",
+      "message": "Orchestrator synthesis\nProject: task-2-autosave (task-2-autosave)\nPhase: critic\nIdea: AI bookkeeping copilot for solo accountants\nCanvas updated: 2026-04-02T23:59:14.178Z\nUse the specialist outputs to push the user toward sharper scope, better evidence, and clear next actions.\n\nScout: Market Scout scaffold response for \"Investigate demand signals for: AI bookkeeping copilot for solo accountants\".\nAnalyst: Competitor Analyst scaffold response for \"Map the competitive landscape for: AI bookkeeping copilot for solo accountants\".\nSizer: Market Sizer scaffold response for \"Estimate addressable market potential for: AI bookkeeping copilot for solo accountants\".\nICP: ICP Whisperer scaffold response for \"Define the sharpest ICP and buying trigger for: AI bookkeeping copilot for solo accountants\".\nArchitect: Architect scaffold response for \"Propose a practical architecture and stack for: AI bookkeeping copilot for solo accountants\".\nTechnical Cofounder: Technical Cofounder scaffold response for \"Turn the architecture into a scoped build plan for: AI bookkeeping copilot for solo accountants\".\nGTM: GTM Specialist scaffold response for \"Outline go-to-market priorities for: AI bookkeeping copilot for solo accountants\".\nCritic: Critic scaffold response for \"Pressure-test the riskiest assumptions in: AI bookkeeping copilot for solo accountants\".",
+      "at": "2026-04-02T23:59:14.184Z"
+    }
+  ],
+  "research": {
+    "scout": {
+      "agent": "Market Scout",
+      "summary": "Market Scout scaffold response for \"Investigate demand signals for: AI bookkeeping copilot for solo accountants\".",
+      "bullets": [
+        "No ANTHROPIC_API_KEY detected, so the scaffold returned a deterministic placeholder.",
+        "Add a valid API key to switch to live Anthropic calls."
+      ],
+      "updatedAt": "2026-04-02T23:59:14.155Z"
+    },
+    "analyst": {
+      "agent": "Competitor Analyst",
+      "summary": "Competitor Analyst scaffold response for \"Map the competitive landscape for: AI bookkeeping copilot for solo accountants\".",
+      "bullets": [
+        "No ANTHROPIC_API_KEY detected, so the scaffold returned a deterministic placeholder.",
+        "Add a valid API key to switch to live Anthropic calls."
+      ],
+      "updatedAt": "2026-04-02T23:59:14.155Z"
+    },
+    "sizer": {
+      "agent": "Market Sizer",
+      "summary": "Market Sizer scaffold response for \"Estimate addressable market potential for: AI bookkeeping copilot for solo accountants\".",
+      "bullets": [
+        "No ANTHROPIC_API_KEY detected, so the scaffold returned a deterministic placeholder.",
+        "Add a valid API key to switch to live Anthropic calls."
+      ],
+      "updatedAt": "2026-04-02T23:59:14.155Z"
+    }
+  },
+  "icp": {
+    "agent": "ICP Whisperer",
+    "summary": "ICP Whisperer scaffold response for \"Define the sharpest ICP and buying trigger for: AI bookkeeping copilot for solo accountants\".",
+    "bullets": [
+      "No ANTHROPIC_API_KEY detected, so the scaffold returned a deterministic placeholder.",
+      "Add a valid API key to switch to live Anthropic calls."
+    ],
+    "updatedAt": "2026-04-02T23:59:14.159Z"
+  },
+  "architecture": {
+    "agent": "Architect",
+    "summary": "Architect scaffold response for \"Propose a practical architecture and stack for: AI bookkeeping copilot for solo accountants\".",
+    "bullets": [
+      "No ANTHROPIC_API_KEY detected, so the scaffold returned a deterministic placeholder.",
+      "Add a valid API key to switch to live Anthropic calls."
+    ],
+    "updatedAt": "2026-04-02T23:59:14.163Z"
+  },
+  "buildPlan": {
+    "agent": "Technical Cofounder",
+    "summary": "Technical Cofounder scaffold response for \"Turn the architecture into a scoped build plan for: AI bookkeeping copilot for solo accountants\".",
+    "bullets": [
+      "No ANTHROPIC_API_KEY detected, so the scaffold returned a deterministic placeholder.",
+      "Add a valid API key to switch to live Anthropic calls."
+    ],
+    "updatedAt": "2026-04-02T23:59:14.170Z"
+  },
+  "gtm": {
+    "agent": "GTM Specialist",
+    "summary": "GTM Specialist scaffold response for \"Outline go-to-market priorities for: AI bookkeeping copilot for solo accountants\".",
+    "bullets": [
+      "No ANTHROPIC_API_KEY detected, so the scaffold returned a deterministic placeholder.",
+      "Add a valid API key to switch to live Anthropic calls."
+    ],
+    "updatedAt": "2026-04-02T23:59:14.174Z"
+  },
+  "critique": {
+    "agent": "Critic",
+    "summary": "Critic scaffold response for \"Pressure-test the riskiest assumptions in: AI bookkeeping copilot for solo accountants\".",
+    "bullets": [
+      "No ANTHROPIC_API_KEY detected, so the scaffold returned a deterministic placeholder.",
+      "Add a valid API key to switch to live Anthropic calls."
+    ],
+    "updatedAt": "2026-04-02T23:59:14.178Z"
+  }
+}
