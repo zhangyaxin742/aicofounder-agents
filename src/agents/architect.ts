@@ -1,12 +1,13 @@
-import type { ProjectCanvas, ResearchNote } from "../canvas/schema.js";
+import { getIdeaSummary, type Canvas, type StoredAgentReport } from "../canvas/schema.js";
 import { runAgent } from "../lib/run-agent.js";
 import { architectPrompt } from "../prompts/architect.js";
 
-export async function runArchitect(canvas: ProjectCanvas): Promise<ResearchNote> {
+export async function runArchitect(canvas: Canvas): Promise<StoredAgentReport> {
   return runAgent({
     agent: "Architect",
+    reportType: "architect",
     systemPrompt: architectPrompt,
     canvas,
-    task: `Propose a practical architecture and stack for: ${canvas.idea}`
+    task: `Propose a practical architecture and stack for: ${getIdeaSummary(canvas)}`
   });
 }

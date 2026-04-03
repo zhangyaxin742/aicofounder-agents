@@ -1,40 +1,67 @@
 import { mkdir, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { ProjectCanvas, ResearchNote } from "../canvas/schema.js";
+import { getIdeaSummary, type Canvas, type StoredAgentReport } from "../canvas/schema.js";
 
-function section(title: string, note: ResearchNote): string {
-  const bullets = note.bullets.map((bullet) => `- ${bullet}`).join("\n");
-  return `## ${title}\n\n${note.summary}\n\n${bullets}`;
+function renderReport(title: string, report?: StoredAgentReport): string {
+  if (!report) {
+    return `## ${title}\n\n[Data gap — not covered in research]\n`;
+  }
+
+  return [
+    `## ${title}`,
+    "",
+    `Summary: ${report.summary}`,
+    `Verification: ${report.verification.status}`,
+    `Source count: ${report.verification.source_count}`,
+    "",
+    report.raw_markdown,
+    ""
+  ].join("\n");
 }
 
-export async function assembleBrief(canvas: ProjectCanvas): Promise<string> {
-  const outputDir = path.resolve(process.cwd(), "output");
-  const filePath = path.join(outputDir, `${canvas.projectSlug}.md`);
-  const markdown = [
-    `# ${canvas.projectSlug}`,
+function renderCriticReports(canvas: Canvas): string {
+  if (canvas.critic.reports.length === 0) {
+    return "## Critic\n\n[Data gap — not covered in research]\n";
+  }
+
+  return [
+    "## Critic",
     "",
+    ...canvas.critic.reports.flatMap((report, index) => [
+      `### Critic Pass ${index + 1}`,
+      "",
+      `Summary: ${report.summary}`,
+      `Verification: ${report.verification.status}`,
+      "",
+      report.raw_markdown,
+      ""
+    ])
+  ].join("\n");
+}
+
+export async function assembleBrief(canvas: Canvas): Promise<string> {
+  const outputDir = path.resolve(process.cwd(), "output");
+  const filePath = path.join(outputDir, `${canvas.project.slug}.md`);
+  const markdown = [
+    `# ${canvas.project.name}`,
+    "",
+    `Project slug: ${canvas.project.slug}`,
+    `Phase: ${canvas.project.phase}`,
     `Generated: ${new Date().toISOString()}`,
     "",
-    `## Idea`,
+    "## Idea",
     "",
-    canvas.idea || "No idea captured.",
+    getIdeaSummary(canvas),
     "",
-    section("Market Scout", canvas.research.scout),
-    "",
-    section("Competitor Analyst", canvas.research.analyst),
-    "",
-    section("Market Sizer", canvas.research.sizer),
-    "",
-    section("ICP Whisperer", canvas.icp),
-    "",
-    section("Architect", canvas.architecture),
-    "",
-    section("Technical Cofounder", canvas.buildPlan),
-    "",
-    section("GTM Specialist", canvas.gtm),
-    "",
-    section("Critic", canvas.critique),
-    ""
+    ...(canvas.idea.founder_context ? [`Founder context: ${canvas.idea.founder_context}`, ""] : []),
+    renderReport("Market Scout", canvas.research.reports.scout),
+    renderReport("Competitor Analyst", canvas.research.reports.analyst),
+    renderReport("Market Sizer", canvas.research.reports.sizer),
+    renderReport("ICP Whisperer", canvas.icp.report),
+    renderReport("Architect", canvas.build.architect),
+    renderReport("Technical Cofounder", canvas.build.technical_cofounder),
+    renderReport("GTM Specialist", canvas.gtm.report),
+    renderCriticReports(canvas)
   ].join("\n");
 
   await mkdir(outputDir, { recursive: true });

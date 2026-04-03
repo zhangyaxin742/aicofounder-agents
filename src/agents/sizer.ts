@@ -1,12 +1,13 @@
-import type { ProjectCanvas, ResearchNote } from "../canvas/schema.js";
+import { getIdeaSummary, type Canvas, type StoredAgentReport } from "../canvas/schema.js";
 import { runAgent } from "../lib/run-agent.js";
 import { sizerPrompt } from "../prompts/sizer.js";
 
-export async function runSizer(canvas: ProjectCanvas): Promise<ResearchNote> {
+export async function runSizer(canvas: Canvas): Promise<StoredAgentReport> {
   return runAgent({
     agent: "Market Sizer",
+    reportType: "market_sizer",
     systemPrompt: sizerPrompt,
     canvas,
-    task: `Estimate addressable market potential for: ${canvas.idea}`
+    task: `Estimate addressable market potential for: ${getIdeaSummary(canvas)}`
   });
 }

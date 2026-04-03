@@ -1,19 +1,25 @@
 import { mkdir, rename, rm, writeFile } from "node:fs/promises";
 import path from "node:path";
-import type { ProjectCanvas } from "./schema.js";
+import { canvasPath } from "./read.js";
+import { slugifyProjectName, type Canvas } from "./schema.js";
 
-export async function writeCanvas(canvas: ProjectCanvas): Promise<string> {
-  const dir = path.resolve(process.cwd(), "canvas");
-  const filePath = path.join(dir, `${canvas.projectSlug}.json`);
-  const tempPath = path.join(
-    dir,
-    `${canvas.projectSlug}.${process.pid ?? "pid"}.${Date.now()}.tmp`
-  );
+function serializeCanvas(canvas: Canvas): string {
+  return `${JSON.stringify(canvas, null, 2)}\n`;
+}
+
+export async function saveCanvas(projectRef: string, canvas: Canvas): Promise<string> {
+  const normalizedProjectRef = projectRef.trim() || canvas.project.slug || canvas.project.name;
+  const slug = slugifyProjectName(normalizedProjectRef);
+  const filePath = canvasPath(slug);
+  const dir = path.dirname(filePath);
+  const tempPath = path.join(dir, `${slug}.${process.pid ?? "pid"}.${Date.now()}.tmp`);
+
+  canvas.project.slug = slug;
 
   await mkdir(dir, { recursive: true });
 
   try {
-    await writeFile(tempPath, `${JSON.stringify(canvas, null, 2)}\n`, "utf8");
+    await writeFile(tempPath, serializeCanvas(canvas), "utf8");
     await rename(tempPath, filePath);
   } catch (error) {
     await rm(tempPath, { force: true }).catch(() => undefined);
@@ -21,4 +27,8 @@ export async function writeCanvas(canvas: ProjectCanvas): Promise<string> {
   }
 
   return filePath;
+}
+
+export async function writeCanvas(canvas: Canvas): Promise<string> {
+  return saveCanvas(canvas.project.slug, canvas);
 }

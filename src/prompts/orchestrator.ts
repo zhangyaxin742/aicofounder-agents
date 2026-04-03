@@ -1,12 +1,17 @@
-import type { ProjectCanvas } from "../canvas/schema.js";
+import { getIdeaSummary, type Canvas } from "../canvas/schema.js";
 
-export function buildOrchestratorPrompt(canvas: ProjectCanvas): string {
-  return [
+export function buildOrchestratorPrompt(canvas: Canvas): string {
+  const lines = [
     "Orchestrator synthesis",
-    `Project: ${canvas.projectName} (${canvas.projectSlug})`,
-    `Phase: ${canvas.phase}`,
-    `Idea: ${canvas.idea || "No idea captured yet."}`,
-    `Canvas updated: ${canvas.updatedAt}`,
+    `Project: ${canvas.project.name} (${canvas.project.slug})`,
+    `Phase: ${canvas.project.phase}`,
+    `Idea: ${getIdeaSummary(canvas)}`,
     "Use the specialist outputs to push the user toward sharper scope, better evidence, and clear next actions."
-  ].join("\n");
+  ];
+
+  if (canvas.conversation_summary) {
+    lines.push(`Conversation summary: ${canvas.conversation_summary}`);
+  }
+
+  return lines.join("\n");
 }

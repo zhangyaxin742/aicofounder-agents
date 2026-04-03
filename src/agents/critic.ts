@@ -1,12 +1,13 @@
-import type { ProjectCanvas, ResearchNote } from "../canvas/schema.js";
+import { getIdeaSummary, type Canvas, type StoredAgentReport } from "../canvas/schema.js";
 import { runAgent } from "../lib/run-agent.js";
 import { criticPrompt } from "../prompts/critic.js";
 
-export async function runCritic(canvas: ProjectCanvas): Promise<ResearchNote> {
+export async function runCritic(canvas: Canvas): Promise<StoredAgentReport> {
   return runAgent({
     agent: "Critic",
+    reportType: "critic",
     systemPrompt: criticPrompt,
     canvas,
-    task: `Pressure-test the riskiest assumptions in: ${canvas.idea}`
+    task: `Pressure-test the riskiest assumptions in: ${getIdeaSummary(canvas)}`
   });
 }

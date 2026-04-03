@@ -1,60 +1,188 @@
 {
-  "projectName": "task-2-smoke-2",
-  "projectSlug": "task-2-smoke-2",
-  "phase": "warmup",
-  "createdAt": "2026-04-03T00:03:26.446Z",
-  "lastOpenedAt": "2026-04-03T00:03:44.001Z",
-  "idea": "",
-  "updatedAt": "2026-04-03T00:03:26.446Z",
-  "conversation": [],
+  "schema_version": "1",
+  "project": {
+    "id": "task-2-smoke-2",
+    "slug": "task-2-smoke-2",
+    "name": "task-2-smoke-2",
+    "created_at": "2026-04-03T00:03:26.446Z",
+    "phase": "warmup"
+  },
+  "last_opened_at": "2026-04-03T03:44:40.054Z",
+  "idea": {
+    "last_updated": "2026-04-03T00:03:26.446Z"
+  },
   "research": {
-    "scout": {
-      "agent": "Market Scout",
-      "summary": "Not run yet.",
-      "bullets": [],
-      "updatedAt": "2026-04-03T00:03:26.446Z"
+    "reports": {
+      "scout": {
+        "raw_markdown": "Not run yet.",
+        "structured": {
+          "report_type": "market_scout",
+          "summary": "Not run yet."
+        },
+        "verification": {
+          "status": "pass_with_warnings",
+          "passed": true,
+          "issues": [
+            "Migrated from legacy note without verifier metadata."
+          ],
+          "source_count": 0,
+          "hallucination_markers": [],
+          "checked_at": "2026-04-03T03:44:40.052Z"
+        },
+        "summary": "Not run yet.",
+        "timestamp": "2026-04-03T00:03:26.446Z"
+      },
+      "analyst": {
+        "raw_markdown": "Not run yet.",
+        "structured": {
+          "report_type": "competitor_analyst",
+          "summary": "Not run yet."
+        },
+        "verification": {
+          "status": "pass_with_warnings",
+          "passed": true,
+          "issues": [
+            "Migrated from legacy note without verifier metadata."
+          ],
+          "source_count": 0,
+          "hallucination_markers": [],
+          "checked_at": "2026-04-03T03:44:40.052Z"
+        },
+        "summary": "Not run yet.",
+        "timestamp": "2026-04-03T00:03:26.446Z"
+      },
+      "sizer": {
+        "raw_markdown": "Not run yet.",
+        "structured": {
+          "report_type": "market_sizer",
+          "summary": "Not run yet."
+        },
+        "verification": {
+          "status": "pass_with_warnings",
+          "passed": true,
+          "issues": [
+            "Migrated from legacy note without verifier metadata."
+          ],
+          "source_count": 0,
+          "hallucination_markers": [],
+          "checked_at": "2026-04-03T03:44:40.052Z"
+        },
+        "summary": "Not run yet.",
+        "timestamp": "2026-04-03T00:03:26.446Z"
+      }
     },
-    "analyst": {
-      "agent": "Competitor Analyst",
-      "summary": "Not run yet.",
-      "bullets": [],
-      "updatedAt": "2026-04-03T00:03:26.446Z"
-    },
-    "sizer": {
-      "agent": "Market Sizer",
-      "summary": "Not run yet.",
-      "bullets": [],
-      "updatedAt": "2026-04-03T00:03:26.446Z"
-    }
+    "failures": [],
+    "last_updated": "2026-04-03T00:03:26.446Z"
   },
   "icp": {
-    "agent": "ICP Whisperer",
-    "summary": "Not run yet.",
-    "bullets": [],
-    "updatedAt": "2026-04-03T00:03:26.446Z"
+    "report": {
+      "raw_markdown": "Not run yet.",
+      "structured": {
+        "report_type": "icp",
+        "summary": "Not run yet."
+      },
+      "verification": {
+        "status": "pass_with_warnings",
+        "passed": true,
+        "issues": [
+          "Migrated from legacy note without verifier metadata."
+        ],
+        "source_count": 0,
+        "hallucination_markers": [],
+        "checked_at": "2026-04-03T03:44:40.053Z"
+      },
+      "summary": "Not run yet.",
+      "timestamp": "2026-04-03T00:03:26.446Z"
+    },
+    "last_updated": "2026-04-03T00:03:26.446Z"
   },
-  "architecture": {
-    "agent": "Architect",
-    "summary": "Not run yet.",
-    "bullets": [],
-    "updatedAt": "2026-04-03T00:03:26.446Z"
-  },
-  "buildPlan": {
-    "agent": "Technical Cofounder",
-    "summary": "Not run yet.",
-    "bullets": [],
-    "updatedAt": "2026-04-03T00:03:26.446Z"
+  "build": {
+    "architect": {
+      "raw_markdown": "Not run yet.",
+      "structured": {
+        "report_type": "architect",
+        "summary": "Not run yet."
+      },
+      "verification": {
+        "status": "pass_with_warnings",
+        "passed": true,
+        "issues": [
+          "Migrated from legacy note without verifier metadata."
+        ],
+        "source_count": 0,
+        "hallucination_markers": [],
+        "checked_at": "2026-04-03T03:44:40.053Z"
+      },
+      "summary": "Not run yet.",
+      "timestamp": "2026-04-03T00:03:26.446Z"
+    },
+    "technical_cofounder": {
+      "raw_markdown": "Not run yet.",
+      "structured": {
+        "report_type": "technical_cofounder",
+        "summary": "Not run yet."
+      },
+      "verification": {
+        "status": "pass_with_warnings",
+        "passed": true,
+        "issues": [
+          "Migrated from legacy note without verifier metadata."
+        ],
+        "source_count": 0,
+        "hallucination_markers": [],
+        "checked_at": "2026-04-03T03:44:40.053Z"
+      },
+      "summary": "Not run yet.",
+      "timestamp": "2026-04-03T00:03:26.446Z"
+    },
+    "last_updated": "2026-04-03T00:03:26.446Z"
   },
   "gtm": {
-    "agent": "GTM Specialist",
-    "summary": "Not run yet.",
-    "bullets": [],
-    "updatedAt": "2026-04-03T00:03:26.446Z"
+    "report": {
+      "raw_markdown": "Not run yet.",
+      "structured": {
+        "report_type": "gtm",
+        "summary": "Not run yet."
+      },
+      "verification": {
+        "status": "pass_with_warnings",
+        "passed": true,
+        "issues": [
+          "Migrated from legacy note without verifier metadata."
+        ],
+        "source_count": 0,
+        "hallucination_markers": [],
+        "checked_at": "2026-04-03T03:44:40.053Z"
+      },
+      "summary": "Not run yet.",
+      "timestamp": "2026-04-03T00:03:26.446Z"
+    },
+    "last_updated": "2026-04-03T00:03:26.446Z"
   },
-  "critique": {
-    "agent": "Critic",
-    "summary": "Not run yet.",
-    "bullets": [],
-    "updatedAt": "2026-04-03T00:03:26.446Z"
-  }
+  "critic": {
+    "reports": [
+      {
+        "raw_markdown": "Not run yet.",
+        "structured": {
+          "report_type": "critic",
+          "summary": "Not run yet."
+        },
+        "verification": {
+          "status": "pass_with_warnings",
+          "passed": true,
+          "issues": [
+            "Migrated from legacy note without verifier metadata."
+          ],
+          "source_count": 0,
+          "hallucination_markers": [],
+          "checked_at": "2026-04-03T03:44:40.052Z"
+        },
+        "summary": "Not run yet.",
+        "timestamp": "2026-04-03T00:03:26.446Z"
+      }
+    ],
+    "last_updated": "2026-04-03T00:03:26.446Z"
+  },
+  "risks": {},
+  "decisions": []
 }
