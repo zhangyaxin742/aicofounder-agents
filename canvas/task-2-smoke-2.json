@@ -1,0 +1,60 @@
+{
+  "projectName": "task-2-smoke-2",
+  "projectSlug": "task-2-smoke-2",
+  "phase": "warmup",
+  "createdAt": "2026-04-03T00:03:26.446Z",
+  "lastOpenedAt": "2026-04-03T00:03:44.001Z",
+  "idea": "",
+  "updatedAt": "2026-04-03T00:03:26.446Z",
+  "conversation": [],
+  "research": {
+    "scout": {
+      "agent": "Market Scout",
+      "summary": "Not run yet.",
+      "bullets": [],
+      "updatedAt": "2026-04-03T00:03:26.446Z"
+    },
+    "analyst": {
+      "agent": "Competitor Analyst",
+      "summary": "Not run yet.",
+      "bullets": [],
+      "updatedAt": "2026-04-03T00:03:26.446Z"
+    },
+    "sizer": {
+      "agent": "Market Sizer",
+      "summary": "Not run yet.",
+      "bullets": [],
+      "updatedAt": "2026-04-03T00:03:26.446Z"
+    }
+  },
+  "icp": {
+    "agent": "ICP Whisperer",
+    "summary": "Not run yet.",
+    "bullets": [],
+    "updatedAt": "2026-04-03T00:03:26.446Z"
+  },
+  "architecture": {
+    "agent": "Architect",
+    "summary": "Not run yet.",
+    "bullets": [],
+    "updatedAt": "2026-04-03T00:03:26.446Z"
+  },
+  "buildPlan": {
+    "agent": "Technical Cofounder",
+    "summary": "Not run yet.",
+    "bullets": [],
+    "updatedAt": "2026-04-03T00:03:26.446Z"
+  },
+  "gtm": {
+    "agent": "GTM Specialist",
+    "summary": "Not run yet.",
+    "bullets": [],
+    "updatedAt": "2026-04-03T00:03:26.446Z"
+  },
+  "critique": {
+    "agent": "Critic",
+    "summary": "Not run yet.",
+    "bullets": [],
+    "updatedAt": "2026-04-03T00:03:26.446Z"
+  }
+}

@@ -19,7 +19,19 @@ async function main(): Promise<void> {
   console.log(chalk.dim("Type your idea, or use /canvas, /export, /rerun, /quit"));
 
   while (true) {
-    const line = (await rl.question(chalk.green("> "))).trim();
+    let line: string;
+
+    try {
+      line = (await rl.question(chalk.green("> "))).trim();
+    } catch (error: unknown) {
+      const message = error instanceof Error ? error.message : String(error);
+
+      if (message.includes("readline was closed")) {
+        break;
+      }
+
+      throw error;
+    }
 
     if (!line) {
       continue;
