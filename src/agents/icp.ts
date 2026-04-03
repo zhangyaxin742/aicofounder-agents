@@ -4,7 +4,7 @@ import { icpPrompt } from "../prompts/icp.js";
 
 export async function runIcp(canvas: Canvas): Promise<StoredAgentReport> {
   return runAgent({
-    agent: "ICP Whisperer",
+    agent: "icp",
     reportType: "icp",
     systemPrompt: icpPrompt,
     canvas,

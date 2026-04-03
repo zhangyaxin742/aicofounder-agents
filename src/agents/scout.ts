@@ -4,7 +4,7 @@ import { scoutPrompt } from "../prompts/scout.js";
 
 export async function runScout(canvas: Canvas): Promise<StoredAgentReport> {
   return runAgent({
-    agent: "Market Scout",
+    agent: "scout",
     reportType: "market_scout",
     systemPrompt: scoutPrompt,
     canvas,

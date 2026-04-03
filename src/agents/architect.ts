@@ -4,7 +4,7 @@ import { architectPrompt } from "../prompts/architect.js";
 
 export async function runArchitect(canvas: Canvas): Promise<StoredAgentReport> {
   return runAgent({
-    agent: "Architect",
+    agent: "architect",
     reportType: "architect",
     systemPrompt: architectPrompt,
     canvas,

@@ -4,7 +4,7 @@ import { criticPrompt } from "../prompts/critic.js";
 
 export async function runCritic(canvas: Canvas): Promise<StoredAgentReport> {
   return runAgent({
-    agent: "Critic",
+    agent: "critic",
     reportType: "critic",
     systemPrompt: criticPrompt,
     canvas,

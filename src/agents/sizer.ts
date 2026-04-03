@@ -4,7 +4,7 @@ import { sizerPrompt } from "../prompts/sizer.js";
 
 export async function runSizer(canvas: Canvas): Promise<StoredAgentReport> {
   return runAgent({
-    agent: "Market Sizer",
+    agent: "sizer",
     reportType: "market_sizer",
     systemPrompt: sizerPrompt,
     canvas,

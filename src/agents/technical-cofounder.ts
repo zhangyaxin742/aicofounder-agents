@@ -6,7 +6,7 @@ export async function runTechnicalCofounder(
   canvas: Canvas
 ): Promise<StoredAgentReport> {
   return runAgent({
-    agent: "Technical Cofounder",
+    agent: "technical-cofounder",
     reportType: "technical_cofounder",
     systemPrompt: technicalCofounderPrompt,
     canvas,

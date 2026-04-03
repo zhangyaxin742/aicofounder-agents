@@ -4,7 +4,7 @@ import { gtmPrompt } from "../prompts/gtm.js";
 
 export async function runGtm(canvas: Canvas): Promise<StoredAgentReport> {
   return runAgent({
-    agent: "GTM Specialist",
+    agent: "gtm",
     reportType: "gtm",
     systemPrompt: gtmPrompt,
     canvas,

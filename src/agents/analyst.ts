@@ -4,7 +4,7 @@ import { analystPrompt } from "../prompts/analyst.js";
 
 export async function runAnalyst(canvas: Canvas): Promise<StoredAgentReport> {
   return runAgent({
-    agent: "Competitor Analyst",
+    agent: "analyst",
     reportType: "competitor_analyst",
     systemPrompt: analystPrompt,
     canvas,
