@@ -68,3 +68,31 @@ export async function assembleBrief(canvas: Canvas): Promise<string> {
   await writeFile(filePath, markdown, "utf8");
   return filePath;
 }
+
+## ADDITIONS 
+
+import * as fs from 'fs';
+import * as path from 'path';
+import type { Canvas } from '../canvas/schema.js';
+import { runExportAgent } from '../agents/export-agent.js';
+
+const OUTPUT_DIR = path.join(process.cwd(), 'output');
+
+export async function exportBrief(canvas: Canvas, slug: string): Promise<string> {
+  if (!fs.existsSync(OUTPUT_DIR)) {
+    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  }
+  const date = new Date().toISOString().split('T')[0];
+  const filename = `${slug}-brief-${date}.md`;
+  const filePath = path.join(OUTPUT_DIR, filename);
+
+  const result = await runExportAgent(canvas);
+  fs.writeFileSync(filePath, result.markdown, 'utf-8');
+
+  canvas.exports = {
+    last_path: filePath,
+    exported_at: new Date().toISOString(),
+  };
+
+  return filePath;
+}

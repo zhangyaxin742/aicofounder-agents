@@ -389,3 +389,59 @@ The implementation assumes these stay aligned.
 - AI is not a lawyer; the legal lens only flags risks
 - this is decision support, not investor-grade certainty
 - output quality depends on the specificity of the intake brief and the quality of available sources
+
+## Setup Notes
+
+### Verify it works
+
+```bash
+npm start
+# → Should print banner and ask for project name
+# → Type a one-sentence idea and press Enter
+# → Orchestrator should respond and propose a next step
+```
+
+### If you get TypeScript errors
+
+```bash
+npm install
+# Then check Node version:
+node --version  # Must be 18+
+```
+
+### Viewing canvas files
+
+Canvas files are in `/canvas/[project-slug].json`. In VS Code:
+- Install the "Prettier" extension to auto-format JSON
+- Right-click → "Format Document" to make it readable
+
+### Viewing exported briefs
+
+Briefs land in `/output/`. In VS Code:
+- Open the `.md` file
+- Press `Cmd+Shift+V` (Mac) or `Ctrl+Shift+V` (Win/Linux) to open Markdown Preview
+- Install "Markdown Preview Enhanced" for better rendering
+
+### Editing prompts
+
+Every agent prompt lives in both:
+- `src/prompts/agents.ts` — used at runtime (edit this to change behavior immediately)
+- `prompts/[agent].md` — human-readable reference (keep in sync manually)
+
+Editing `src/prompts/agents.ts` is sufficient to change agent behavior.
+
+### Reducing costs during testing
+
+In `src/lib/run-agent.ts`, change the default model:
+```typescript
+model = 'claude-sonnet-4-6',  // ← change to 'claude-haiku-4-5-20251001' for testing
+```
+
+In `src/orchestrator.ts`, change the orchestrator model:
+```typescript
+model: 'claude-opus-4-6',  // ← change to 'claude-sonnet-4-6' for testing
+```
+
+---
+
+*Cofounder Agent Swarm — open source, MIT license, GitHub stars appreciated.*

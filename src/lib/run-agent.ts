@@ -519,3 +519,150 @@ function sleep(ms: number): Promise<void> {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+## ADDITIONS 
+
+import Anthropic from '@anthropic-ai/sdk';
+import chalk from 'chalk';
+import type { Canvas } from '../canvas/schema.js';
+import { buildContextSlice } from './context-builder.js';
+import { recordCost } from './budget.js';
+import { logAgentRun } from './telemetry.js';
+
+const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
+
+const WEB_SEARCH_TOOL = {
+  type: 'web_search_20250305',
+  name: 'web_search',
+} as unknown as Anthropic.Messages.Tool;
+
+export type AgentName =
+  | 'scout'
+  | 'analyst'
+  | 'sizer'
+  | 'icp'
+  | 'architect'
+  | 'technical-cofounder'
+  | 'gtm'
+  | 'critic'
+  | 'verifier'
+  | 'export-agent';
+
+export interface AgentResult {
+  markdown: string;
+  structured: Record<string, unknown>;
+  usage?: {
+    input_tokens?: number;
+    output_tokens?: number;
+  };
+}
+
+export interface AgentOptions {
+  agent: AgentName;
+  systemPrompt: string;
+  brief: string;
+  canvas: Canvas;
+  model?: string;
+  maxTokens?: number;
+  timeoutMs?: number;
+}
+
+const AGENT_MODEL_DEFAULTS: Record<AgentName, string> = {
+  scout: 'claude-sonnet-4-6',
+  analyst: 'claude-sonnet-4-6',
+  sizer: 'claude-sonnet-4-6',
+  icp: 'claude-sonnet-4-6',
+  architect: 'claude-sonnet-4-6',
+  'technical-cofounder': 'claude-opus-4-6',
+  gtm: 'claude-sonnet-4-6',
+  critic: 'claude-opus-4-6',
+  verifier: 'claude-haiku-4-5-20251001',
+  'export-agent': 'claude-sonnet-4-6',
+};
+
+const WEB_SEARCH_ENABLED: Record<AgentName, boolean> = {
+  scout: true,
+  analyst: true,
+  sizer: true,
+  icp: true,
+  architect: true,
+  'technical-cofounder': false,
+  gtm: true,
+  critic: false,
+  verifier: false,
+  'export-agent': false,
+};
+
+export async function runAgent({
+  agent,
+  systemPrompt,
+  brief,
+  canvas,
+  model = AGENT_MODEL_DEFAULTS[agent],
+  maxTokens = 8000,
+  timeoutMs = 60000,
+}: AgentOptions): Promise<AgentResult> {
+  process.stdout.write(chalk.yellow(`  → ${agent}`));
+  const interval = setInterval(() => process.stdout.write(chalk.yellow('.')), 1200);
+
+  const userMessage = buildAgentMessage(agent, brief, canvas);
+  const response = await withRetries(async () =>
+    withTimeout(
+      client.messages.create({
+        model,
+        max_tokens: maxTokens,
+        system: systemPrompt,
+        messages: [{ role: 'user', content: userMessage }],
+        ...(WEB_SEARCH_ENABLED[agent] ? { tools: [WEB_SEARCH_TOOL] } : {}),
+      }),
+      timeoutMs
+    )
+  ).finally(() => clearInterval(interval));
+
+  const text = response.content
+    .filter((block): block is Anthropic.Messages.TextBlock => block.type === 'text')
+    .map((block) => block.text)
+    .join('\n');
+
+  const structured = extractStructuredOutput(text);
+  const markdown = stripStructuredOutput(text);
+
+  recordCost(response.usage);
+  logAgentRun({
+    agent,
+    model,
+    usage: response.usage,
+    webSearch: WEB_SEARCH_ENABLED[agent],
+    structuredExtracted: Boolean(structured),
+  });
+
+  process.stdout.write(chalk.green(' done\n'));
+
+  return {
+    markdown,
+    structured,
+    usage: response.usage,
+  };
+}
+
+export function buildAgentMessage(agent: AgentName, brief: string, canvas: Canvas): string {
+  const context = buildContextSlice({
+    agent,
+    canvas,
+    includeFullCanvas: agent === 'critic' || agent === 'export-agent',
+  });
+
+  return `<brief>\n${brief}\n</brief>\n\n<context>\n${context}\n</context>`;
+}
+
+function extractStructuredOutput(text: string): Record<string, unknown> {
+  const match = text.match(/<json_output>\s*([\s\S]*?)\s*<\/json_output>/i);
+  if (!match) {
+    throw new Error('Structured output missing from agent response');
+  }
+  return JSON.parse(match[1]);
+}
+
+function stripStructuredOutput(text: string): string {
+  return text.replace(/<json_output>[\s\S]*?<\/json_output>/i, '').trim();
+}
