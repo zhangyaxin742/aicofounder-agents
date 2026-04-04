@@ -38,6 +38,7 @@ export async function runVerifier({
     model: 'claude-haiku-4-5-20251001',
     maxTokens: 2_000,
     requireStructuredOutput: true,
+    showLoading: false,
     task: [
       `Audit the ${sourceAgent} report for unsupported specificity, fabricated-looking claims, and source hygiene.`,
       'Use the provided markdown and structured payload as the object of review. Do not do fresh research.',

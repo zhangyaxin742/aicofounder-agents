@@ -13,6 +13,7 @@ import { runVerifier } from './agents/verifier.js';
 import { loadOrCreateCanvas } from './canvas/read.js';
 import { saveCanvas } from './canvas/write.js';
 import { exportBrief } from './lib/export.js';
+import { startLoading, stopLoading } from './lib/loading.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -146,8 +147,15 @@ const ORCHESTRATOR_TOOLS: Anthropic.Messages.Tool[] = [
 ];
 
 const WARMUP_TOOLS: Anthropic.Messages.Tool[] = ORCHESTRATOR_TOOLS.filter(
-  (tool) => tool.name === 'update_canvas'
+  (tool) => tool.name === 'update_canvas' || tool.name === 'run_research_phase'
 );
+
+function buildOrchestratorSystemPrompt(canvas: Canvas): string {
+  return ORCHESTRATOR_SYSTEM_PROMPT.replace(
+    '{{CANVAS_STATE}}',
+    JSON.stringify(canvas, null, 2)
+  );
+}
 
 function selectOrchestratorModel(canvas: Canvas): string {
   if (canvas.project.phase === 'warmup') return 'claude-opus-4-6';
@@ -334,7 +342,7 @@ async function runOrchestratorTurn(
   canvas: Canvas
 ): Promise<{ response: string; updatedCanvas: Canvas }> {
 
-  const systemPrompt = ORCHESTRATOR_SYSTEM_PROMPT;
+  const systemPrompt = buildOrchestratorSystemPrompt(canvas);
 
   // Phase-aware tool selection
   const isWarmup = canvas.project.phase === 'warmup';
@@ -343,12 +351,15 @@ async function runOrchestratorTurn(
     ? WARMUP_TOOLS
     : ORCHESTRATOR_TOOLS;
 
+  startLoading('orchestrator');
   const response = await client.messages.create({
-    model: 'claude-opus-4-6',
+    model: selectOrchestratorModel(canvas),
     max_tokens: 4096,
     system: systemPrompt,
     messages: history,
     tools,
+  }).finally(() => {
+    stopLoading();
   });
 
 

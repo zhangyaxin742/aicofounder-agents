@@ -1,0 +1,53 @@
+{
+  "schema_version": "1",
+  "project": {
+    "id": "app-store-for-vibecoded-apps",
+    "slug": "app-store-for-vibecoded-apps",
+    "name": "app store for vibecoded apps",
+    "created_at": "2026-04-04T04:50:59.898Z",
+    "phase": "intake"
+  },
+  "last_opened_at": "2026-04-04T04:50:59.898Z",
+  "idea": {
+    "summary": "A curated PWA app store where non-technical people discover simple, affordable tools for specific everyday needs — tools too niche for big companies to build, now possible because of AI-assisted development.",
+    "founder_context": "Founder has firsthand experience in startup Reddit communities, sees massive supply of vibe coders desperate for distribution. Noticed Apple tightening policies against vibecoded apps, creating a displacement opportunity. Wants to build a PWA-first download system that sidesteps native app store gatekeepers.",
+    "initial_assumptions": [
+      "Apple's tightening of vibecoded app policies creates real displacement — rejected apps need a home",
+      "Vibe coders are desperate for distribution and will list on a new platform with low friction",
+      "Non-technical users will trust and install PWAs from a curated third-party store",
+      "There's a meaningful long tail of niche use cases that big SaaS won't serve",
+      "Curation/quality control is achievable without Apple-level review costs",
+      "PWAs are good enough for most of these niche use cases (no need for native)",
+      "Discovery (not just listing) is the core value — users come with a need and find a tool"
+    ],
+    "open_questions": [
+      "How familiar are non-technical users with PWAs? Is the install UX a barrier?",
+      "What's the actual volume of vibecoded apps being rejected or not submitted to Apple/Google?",
+      "How would curation work at scale — community ratings, editorial, automated quality checks?",
+      "What's the monetization model — listing fees, revenue share, freemium for devs, ads?",
+      "Are there existing competitors doing this or adjacent plays (PWA stores, indie app directories)?",
+      "What categories of niche tools have the strongest demand signal?",
+      "Can you build trust with non-technical users without the Apple/Google brand backing the store?"
+    ],
+    "value_proposition": "Non-technical people get a single place to discover and install simple, cheap, niche tools that don't exist on traditional app stores — powered by the explosion of AI-built software that Apple and Google won't distribute.",
+    "possible_icp": [
+      "Non-technical solopreneurs and freelancers who need simple niche tools but find mainstream SaaS overkill/expensive",
+      "Small business owners looking for cheap single-purpose utilities",
+      "Non-technical everyday consumers who want a specific app for a specific micro-need (e.g. pet feeding schedule, niche calculator, local event tracker)",
+      "Vibe coders / AI-assisted developers who need distribution for their apps (supply side)"
+    ],
+    "last_updated": "2026-04-04T05:04:40.998Z"
+  },
+  "research": {
+    "reports": {},
+    "failures": []
+  },
+  "icp": {},
+  "build": {},
+  "gtm": {},
+  "critic": {
+    "reports": []
+  },
+  "risks": {},
+  "decisions": []
+}

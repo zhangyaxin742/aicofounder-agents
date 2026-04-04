@@ -8,6 +8,7 @@ import {
 } from "../canvas/schema.js";
 import { checkBudget, recordUsageCost } from "./budget.js";
 import { buildContextSlice } from "./context-builder.js";
+import { printDone, printFailed, startLoading, stopLoading } from "./loading.js";
 import { buildTelemetryRecord, recordTelemetry } from "./telemetry.js";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "missing" });
@@ -94,6 +95,7 @@ export interface RunAgentOptions {
   maxTokens?: number;
   timeoutMs?: number;
   requireStructuredOutput?: boolean;
+  showLoading?: boolean;
 }
 
 export interface ExecuteAgentRunResult {
@@ -166,7 +168,8 @@ export async function executeAgentRun({
   model = AGENT_MODEL_DEFAULTS[agent],
   maxTokens = 8000,
   timeoutMs = AGENT_TIMEOUTS_MS[agent],
-  requireStructuredOutput = false
+  requireStructuredOutput = false,
+  showLoading = true
 }: RunAgentOptions): Promise<ExecuteAgentRunResult> {
   if (!process.env.ANTHROPIC_API_KEY) {
     throw new MissingApiKeyError();
@@ -178,13 +181,13 @@ export async function executeAgentRun({
   const fallbackChain = FALLBACK_CHAINS[model] ?? [model];
   const webSearchEnabled = WEB_SEARCH_ENABLED[agent];
   const userMessage = buildAgentMessage(agent, task, canvas);
-  const progressLabel = `${agent}${webSearchEnabled ? " researching" : " running"}`;
-
-  process.stdout.write(chalk.yellow(`  -> ${progressLabel}`));
-  const interval = setInterval(() => process.stdout.write(chalk.yellow(".")), 1200);
 
   let totalRetries = 0;
   let lastError: Error | null = null;
+
+  if (showLoading) {
+    startLoading(agent);
+  }
 
   try {
     for (const currentModel of fallbackChain) {
@@ -220,16 +223,13 @@ export async function executeAgentRun({
           const fallbackUsed = currentModel !== model;
           const costUsd = recordUsageCost(currentModel, usage);
 
-          clearInterval(interval);
-          process.stdout.write(
-            chalk.green(" done") +
-              chalk.gray(
-                ` (${Math.round((usage.input_tokens ?? 0) / 1000)}k->${Math.round((usage.output_tokens ?? 0) / 1000)}k tokens, $${costUsd.toFixed(3)}, ${(durationMs / 1000).toFixed(1)}s)`
-              ) +
-              (fallbackUsed ? chalk.yellow(" [fallback]") : "") +
-              (!parsed.contractValid ? chalk.yellow(" [markdown-only]") : "") +
-              "\n"
-          );
+          if (showLoading) {
+            stopLoading();
+            printDone(
+              agent,
+              `${Math.round((usage.input_tokens ?? 0) / 1000)}k->${Math.round((usage.output_tokens ?? 0) / 1000)}k tokens, $${costUsd.toFixed(3)}, ${(durationMs / 1000).toFixed(1)}s${fallbackUsed ? " [fallback]" : ""}${!parsed.contractValid ? " [markdown-only]" : ""}`
+            );
+          }
 
           recordTelemetry(buildTelemetryRecord({
             agent,
@@ -270,18 +270,8 @@ export async function executeAgentRun({
 
           totalRetries += 1;
           const waitMs = retryDelayMs(attempt, isRateLimitError(error));
-          process.stdout.write(
-            chalk.red(
-              `\n    ! ${agent}: ${lastError.message} - retrying in ${Math.max(1, Math.round(waitMs / 1000))}s`
-            )
-          );
           await sleep(waitMs);
         }
-      }
-
-      if (currentModel !== fallbackChain[fallbackChain.length - 1]) {
-        const nextModel = fallbackChain[fallbackChain.indexOf(currentModel) + 1];
-        process.stdout.write(chalk.yellow(`\n    -> ${agent}: falling back to ${nextModel}`));
       }
     }
 
@@ -306,11 +296,15 @@ export async function executeAgentRun({
       structuredExtracted: false,
       error: finalError.message
     }));
-    clearInterval(interval);
-    process.stdout.write(chalk.red(` FAILED (${finalError.message})\n`));
+    if (showLoading) {
+      stopLoading();
+      printFailed(agent, finalError.message);
+    }
     throw finalError;
   } finally {
-    clearInterval(interval);
+    if (showLoading) {
+      stopLoading();
+    }
   }
 }
 

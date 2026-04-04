@@ -1,5 +1,6 @@
 import chalk from 'chalk';
 import { runAgent } from './run-agent.js';
+import { markAgentDone, startParallelLoading, stopLoading } from './loading.js';
 import { SCOUT_SYSTEM_PROMPT } from '../prompts/scout.js';
 import { ANALYST_SYSTEM_PROMPT } from '../prompts/analyst.js';
 import { SIZER_SYSTEM_PROMPT } from '../prompts/sizer.js';
@@ -9,6 +10,10 @@ import { runVerifier } from '../agents/verifier.js';
 export async function runResearchPhase(brief: string, canvas: Canvas): Promise<Canvas> {
   console.log(chalk.yellow('\n  Launching Scout, Analyst, and Sizer in parallel...\n'));
 
+  const reportNames: Array<'scout' | 'analyst' | 'sizer'> = ['scout', 'analyst', 'sizer'];
+
+  startParallelLoading(reportNames);
+
   const settled = await Promise.allSettled([
     runAgent({
       agent: 'scout',
@@ -16,6 +21,7 @@ export async function runResearchPhase(brief: string, canvas: Canvas): Promise<C
       systemPrompt: SCOUT_SYSTEM_PROMPT,
       canvas,
       task: brief,
+      showLoading: false,
     }),
     runAgent({
       agent: 'analyst',
@@ -23,6 +29,7 @@ export async function runResearchPhase(brief: string, canvas: Canvas): Promise<C
       systemPrompt: ANALYST_SYSTEM_PROMPT,
       canvas,
       task: brief,
+      showLoading: false,
     }),
     runAgent({
       agent: 'sizer',
@@ -30,10 +37,15 @@ export async function runResearchPhase(brief: string, canvas: Canvas): Promise<C
       systemPrompt: SIZER_SYSTEM_PROMPT,
       canvas,
       task: brief,
+      showLoading: false,
     }),
-  ]);
+  ].map((promise, index) =>
+    promise.finally(() => {
+      markAgentDone(reportNames[index]);
+    })
+  ));
 
-  const reportNames: Array<'scout' | 'analyst' | 'sizer'> = ['scout', 'analyst', 'sizer'];
+  stopLoading();
   canvas.research.reports ??= {};
   canvas.research.failures ??= [];
 
