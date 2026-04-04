@@ -510,3 +510,29 @@ function sleep(ms: number): Promise<void> {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
+
+## ADDITIONS 
+const response = await client.messages.create(
+  {
+    model: currentModel,
+    max_tokens: maxTokens,
+    // Cache the system prompt — identical across turns/calls
+    system: [
+      {
+        type: 'text',
+        text: systemPrompt,
+        cache_control: { type: 'ephemeral' },  // 5-min cache
+      },
+    ],
+    messages: [{ role: 'user', content: userMessage }],
+    ...(webSearch && { tools: [WEB_SEARCH_TOOL] }),
+  },
+  { signal: controller.signal }
+);
+
+// Track cache performance in telemetry
+const cacheCreation = response.usage?.cache_creation_input_tokens ?? 0;
+const cacheRead = response.usage?.cache_read_input_tokens ?? 0;
+const cacheHitRate = cacheRead > 0
+  ? Math.round((cacheRead / (cacheRead + (response.usage?.input_tokens ?? 0))) * 100)
+  : 0;

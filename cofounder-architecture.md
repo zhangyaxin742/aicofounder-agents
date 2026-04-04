@@ -2651,11 +2651,3 @@ const response = await client.messages.create({
 ```
 
 The key insight: **split the user message into static prefix (cacheable) and dynamic suffix (changes per turn)**. The canvas state's first ~60% (idea, research summaries, early decisions) doesn't change between turns — cache it. Only the latest phase data and conversation is dynamic.
-
-### Updated .env.example
-
-```bash
-ANTHROPIC_API_KEY=sk-ant-your-key-here
-MAX_SESSION_COST=2.00
-COST_WARNING_THRESHOLD=0.80
-```
