@@ -48,9 +48,6 @@ RULES:
 - If the canvas is thin (early phase, incomplete), extract what you can and note gaps
 - Return valid JSON. No markdown formatting. No preamble text.`;
 
-
-## ADDITIONS 
-
 export const SPECIALIST_OUTPUT_CONTRACT = `
 Every specialist response must include:
 

@@ -520,79 +520,7 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
 
-## ADDITIONS 
-
-import Anthropic from '@anthropic-ai/sdk';
-import chalk from 'chalk';
-import type { Canvas } from '../canvas/schema.js';
-import { buildContextSlice } from './context-builder.js';
-import { recordCost } from './budget.js';
-import { logAgentRun } from './telemetry.js';
-
-const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
-
-const WEB_SEARCH_TOOL = {
-  type: 'web_search_20250305',
-  name: 'web_search',
-} as unknown as Anthropic.Messages.Tool;
-
-export type AgentName =
-  | 'scout'
-  | 'analyst'
-  | 'sizer'
-  | 'icp'
-  | 'architect'
-  | 'technical-cofounder'
-  | 'gtm'
-  | 'critic'
-  | 'verifier'
-  | 'export-agent';
-
-export interface AgentResult {
-  markdown: string;
-  structured: Record<string, unknown>;
-  usage?: {
-    input_tokens?: number;
-    output_tokens?: number;
-  };
-}
-
-export interface AgentOptions {
-  agent: AgentName;
-  systemPrompt: string;
-  brief: string;
-  canvas: Canvas;
-  model?: string;
-  maxTokens?: number;
-  timeoutMs?: number;
-}
-
-const AGENT_MODEL_DEFAULTS: Record<AgentName, string> = {
-  scout: 'claude-sonnet-4-6',
-  analyst: 'claude-sonnet-4-6',
-  sizer: 'claude-sonnet-4-6',
-  icp: 'claude-sonnet-4-6',
-  architect: 'claude-sonnet-4-6',
-  'technical-cofounder': 'claude-opus-4-6',
-  gtm: 'claude-sonnet-4-6',
-  critic: 'claude-opus-4-6',
-  verifier: 'claude-haiku-4-5-20251001',
-  'export-agent': 'claude-sonnet-4-6',
-};
-
-const WEB_SEARCH_ENABLED: Record<AgentName, boolean> = {
-  scout: true,
-  analyst: true,
-  sizer: true,
-  icp: true,
-  architect: true,
-  'technical-cofounder': false,
-  gtm: true,
-  critic: false,
-  verifier: false,
-  'export-agent': false,
-};
-
+/*
 export async function runAgent({
   agent,
   systemPrompt,
@@ -666,3 +594,4 @@ function extractStructuredOutput(text: string): Record<string, unknown> {
 function stripStructuredOutput(text: string): string {
   return text.replace(/<json_output>[\s\S]*?<\/json_output>/i, '').trim();
 }
+*/

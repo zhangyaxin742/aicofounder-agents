@@ -1,6 +1,8 @@
 import { mkdir, writeFile } from "node:fs/promises";
+import { existsSync, mkdirSync, writeFileSync } from "node:fs";
 import path from "node:path";
 import { getIdeaSummary, type Canvas, type StoredAgentReport } from "../canvas/schema.js";
+import { runExportAgent } from "../agents/export-agent.js";
 
 function renderReport(title: string, report?: StoredAgentReport): string {
   if (!report) {
@@ -69,25 +71,18 @@ export async function assembleBrief(canvas: Canvas): Promise<string> {
   return filePath;
 }
 
-## ADDITIONS 
-
-import * as fs from 'fs';
-import * as path from 'path';
-import type { Canvas } from '../canvas/schema.js';
-import { runExportAgent } from '../agents/export-agent.js';
-
 const OUTPUT_DIR = path.join(process.cwd(), 'output');
 
 export async function exportBrief(canvas: Canvas, slug: string): Promise<string> {
-  if (!fs.existsSync(OUTPUT_DIR)) {
-    fs.mkdirSync(OUTPUT_DIR, { recursive: true });
+  if (!existsSync(OUTPUT_DIR)) {
+    mkdirSync(OUTPUT_DIR, { recursive: true });
   }
   const date = new Date().toISOString().split('T')[0];
   const filename = `${slug}-brief-${date}.md`;
   const filePath = path.join(OUTPUT_DIR, filename);
 
   const result = await runExportAgent(canvas);
-  fs.writeFileSync(filePath, result.markdown, 'utf-8');
+  writeFileSync(filePath, result.markdown, 'utf-8');
 
   canvas.exports = {
     last_path: filePath,
