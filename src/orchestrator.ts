@@ -330,72 +330,28 @@ async function handleTool(
 
 // ─── Orchestrator Turn ────────────────────────────────────────────────────────
 
-export async function runOrchestratorTurn(
-  messages: Anthropic.Messages.MessageParam[],
+async function runOrchestratorTurn(
+  history: Array<{ role: 'user' | 'assistant'; content: string }>,
   canvas: Canvas
 ): Promise<{ response: string; updatedCanvas: Canvas }> {
-  const systemPrompt = ORCHESTRATOR_SYSTEM_PROMPT.replace(
-    '{{CANVAS_STATE}}',
-    JSON.stringify(canvas, null, 2)
-  );
 
-  let currentMessages = [...messages];
-  let updatedCanvas = canvas;
-  let finalResponse = '';
+  const systemPrompt = buildOrchestratorPrompt(canvas);
 
-  // Agentic loop — continue while orchestrator is calling tools
-  while (true) {
-    const response = await client.messages.create({
-      model: selectOrchestratorModel(updatedCanvas),
-      max_tokens: 4096,
-      system: systemPrompt,
-      messages: currentMessages,
-      tools: updatedCanvas.project.phase === 'warmup' ? WARMUP_TOOLS : ORCHESTRATOR_TOOLS,
-    });
+  // Phase-aware tool selection
+  const isWarmup = canvas.project.phase === 'warmup';
 
-    // Capture any text the orchestrator produced this turn
-    const textBlocks = response.content.filter(
-      (b): b is Anthropic.Messages.TextBlock => b.type === 'text'
-    );
-    if (textBlocks.length > 0) {
-      finalResponse = textBlocks.map((b) => b.text).join('\n');
-    }
+  const tools = isWarmup
+    ? [UPDATE_CANVAS_TOOL]     // Only canvas update (to transition to intake)
+    : ORCHESTRATOR_TOOLS;       // Full tool suite
 
-    // Done — no tool calls
-    if (response.stop_reason !== 'tool_use') break;
+  const response = await client.messages.create({
+    model: 'claude-opus-4-6',
+    max_tokens: 4096,
+    system: systemPrompt,
+    messages: history,
+    tools,
+  });
 
-    // Handle tool calls
-    const toolUseBlocks = response.content.filter(
-      (b): b is Anthropic.Messages.ToolUseBlock => b.type === 'tool_use'
-    );
-
-    const toolResults: Anthropic.Messages.ToolResultBlockParam[] = [];
-
-    for (const toolUse of toolUseBlocks) {
-      const { output, updatedCanvas: newCanvas } = await handleTool(
-        toolUse.name,
-        toolUse.input as Record<string, unknown>,
-        updatedCanvas
-      );
-      updatedCanvas = newCanvas;
-      toolResults.push({
-        type: 'tool_result',
-        tool_use_id: toolUse.id,
-        content: output,
-      });
-    }
-
-    // Append assistant response + tool results to continue the loop
-    currentMessages = [
-      ...currentMessages,
-      { role: 'assistant', content: response.content },
-      { role: 'user', content: toolResults },
-    ];
-  }
-
-  return { response: finalResponse, updatedCanvas };
-}
-```
 
 Notes:
 - `warmup` is tool-limited and cannot trigger research fan-out.
