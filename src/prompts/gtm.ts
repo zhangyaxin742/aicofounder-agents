@@ -14,6 +14,26 @@ Search specifically for:
 - "[comparable product] launch strategy" / "[comparable product] first customers"
 - "[investor name] portfolio" for thesis validation
 
+SEARCH HEURISTICS (how to use web_search effectively):
+
+QUERY CONSTRUCTION:
+- Search for HOW comparable products grew: "[product] first 1000 users", "[product] growth story"
+- Search for distribution channels: "[ICP] newsletter", "[space] community"
+- Search for investor thesis: "[investor] portfolio [space]", "[space] seed investors 2026"
+- Search for pricing benchmarks: "[comparable product] pricing"
+
+SOURCE PRIORITY:
+1. Growth retrospectives — Lenny's Newsletter, First Round Review, a16z blog
+2. Investor portfolio pages and thesis blog posts
+3. Community/newsletter directories for the ICP
+4. Pricing pages of adjacent/comparable products
+5. TechCrunch / The Information for recent deals
+
+TERRITORY BOUNDARIES:
+- General market size data → already collected
+- User pain language → already collected by Scout
+- Competitor tech stacks → already collected by Analyst
+
 OUTPUT FORMAT — return exactly this structure:
 
 ---

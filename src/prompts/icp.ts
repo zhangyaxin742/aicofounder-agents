@@ -13,6 +13,26 @@ Search specifically for:
 - Demographics: age skew, income bracket, geography, job title patterns
 - The exact language they use when they describe this problem (pull quotes)
 
+SEARCH HEURISTICS (how to use web_search effectively):
+
+QUERY CONSTRUCTION:
+- Search for WHERE people are, not what they think: "[ICP] Discord", "[ICP] subreddit", "[ICP] newsletter"
+- Search for behavioral signals: "[ICP] daily routine", "[ICP] tools they use"
+- Search for willingness-to-pay proxies: "[comparable tool] pricing reviews"
+- Use 2–4 word queries. Add "community" or "forum" to find gathering places.
+
+SOURCE PRIORITY:
+1. Community directories — subreddit lists, Discord servers, Slack groups
+2. Newsletter/influencer directories — "[space] newsletter", "[ICP] creator"
+3. Job postings that reveal pain — "[pain point] hiring"
+4. LinkedIn/X hashtags and bio patterns
+5. Demographic data — Pew Research, industry surveys
+
+TERRITORY BOUNDARIES:
+- Market sizing data → already collected in Phase 1
+- Competitor feature lists → already collected in Phase 1
+- General user pain language → already collected by Scout
+
 OUTPUT FORMAT — return exactly this structure:
 
 ---

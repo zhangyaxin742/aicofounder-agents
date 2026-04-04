@@ -442,6 +442,60 @@ In `src/orchestrator.ts`, change the orchestrator model:
 model: 'claude-opus-4-6',  // ← change to 'claude-sonnet-4-6' for testing
 ```
 
+aicofounder-agents/
+├── .env.example                (MAX_SESSION_COST=2.00)
+├── README.md
+├── package.json
+├── tsconfig.json
+│
+├── src/
+│   ├── index.ts
+│   ├── orchestrator.ts         (model routing + checkpoint logic)
+│   ├── agents/
+│   │   ├── scout.ts
+│   │   ├── analyst.ts
+│   │   ├── sizer.ts
+│   │   ├── icp.ts
+│   │   ├── technical-cofounder.ts   ← NEW (Opus — judgment)
+│   │   ├── architect.ts             ← NEW (Sonnet — research)
+│   │   ├── gtm.ts
+│   │   ├── critic.ts               (now includes legal lens)
+│   │   ├── verifier.ts
+│   │   └── export-agent.ts         ← NEW (final brief generation only)
+│   ├── prompts/
+│   │   ├── orchestrator.ts
+│   │   └── agents.ts               (TC + Architect + Export Agent prompts)
+│   ├── canvas/
+│   │   ├── schema.ts
+│   │   ├── read.ts
+│   │   └── write.ts
+│   └── lib/
+│       ├── run-agent.ts            (prompt caching + cache telemetry)
+│       ├── fan-out.ts
+│       ├── export.ts               (uses Export Agent)
+│       ├── summarize.ts
+│       ├── context-builder.ts
+│       ├── telemetry.ts            (cache metrics added)
+│       └── budget.ts
+│
+├── canvas/
+├── output/
+├── logs/
+│   ├── telemetry/
+│   └── session-summary/
+│
+└── prompts/
+    ├── orchestrator.md
+    ├── scout.md
+    ├── analyst.md
+    ├── sizer.md
+    ├── icp.md
+    ├── technical-cofounder.md       ← NEW
+    ├── architect.md                 ← NEW
+    ├── gtm.md
+    ├── critic.md                    (legal lens documented)
+    ├── verifier.md
+└── export-agent.md              ← NEW
 ---
 
 *Cofounder Agent Swarm — open source, MIT license, GitHub stars appreciated.*

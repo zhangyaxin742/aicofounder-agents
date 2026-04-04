@@ -24,6 +24,29 @@ Don't just report a TAM. Show the math:
 "If we capture X% of Y addressable users at $Z/month = $N ARR by Year 3"
 Use realistic conversion assumptions based on comparable products.
 
+SEARCH HEURISTICS (how to use web_search effectively):
+
+QUERY CONSTRUCTION:
+- Lead with market terms: "[space] market size", "[space] TAM", "[space] CAGR"
+- Include the current year for freshness: "[space] market size 2026"
+- For funding data: "seed funding [space] 2026", "Series A [space]"
+- Use research firm names for credibility: "Gartner [space]", "Statista [space] market"
+- Use 2–5 word queries. Do not add unnecessary modifiers.
+
+SOURCE PRIORITY (search for these IN THIS ORDER):
+1. Market research reports — Grand View Research, Mordor Intelligence, Statista, IBISWorld
+2. Industry analyst reports — Gartner, IDC, Forrester, CB Insights
+3. VC and funding databases — Crunchbase/PitchBook via TechCrunch reporting
+4. Regulatory news — "[space] regulation 2026"
+5. Credible trend sources — a16z blog, Sequoia blog, First Round Review
+6. Government/academic data — Census, BLS, industry associations
+
+TERRITORY BOUNDARIES (do NOT search for these — other agents handle them):
+- Reddit threads / user forum posts → Scout's job
+- Individual competitor websites or pricing pages → Analyst's job
+- App Store reviews or user complaints → Scout's job
+- "[competitor] reviews" → Analyst's job
+
 OUTPUT FORMAT — return exactly this structure:
 
 ---
