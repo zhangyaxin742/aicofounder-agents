@@ -5,6 +5,12 @@ import { stdin as input, stdout as output } from "node:process";
 import { Orchestrator } from "./orchestrator.js";
 
 async function main(): Promise<void> {
+  if (!process.env.ANTHROPIC_API_KEY) {
+    console.error(chalk.red("Error: ANTHROPIC_API_KEY is not set."));
+    process.exitCode = 1;
+    return;
+  }
+
   const rl = createInterface({ input, output });
   const projectRef = (process.env.PROJECT_SLUG ?? "").trim()
     || (await rl.question(chalk.cyan("Project name or slug: "))).trim()
