@@ -8,7 +8,7 @@ import {
 } from "../canvas/schema.js";
 import { checkBudget, recordUsageCost } from "./budget.js";
 import { buildContextSlice } from "./context-builder.js";
-import { recordTelemetry } from "./telemetry.js";
+import { buildTelemetryRecord, recordTelemetry } from "./telemetry.js";
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY ?? "missing" });
 
@@ -210,8 +210,13 @@ export async function executeAgentRun({
             cache_creation_input_tokens: response.usage?.cache_creation_input_tokens ?? 0,
             cache_read_input_tokens: response.usage?.cache_read_input_tokens ?? 0
           };
-          const cacheWriteTokens = usage.cache_creation_input_tokens ?? 0;
-          const cacheReadTokens = usage.cache_read_input_tokens ?? 0;
+          const cacheCreation = response.usage?.cache_creation_input_tokens ?? 0;
+          const cacheRead = response.usage?.cache_read_input_tokens ?? 0;
+          const cacheHitRate = cacheRead > 0
+            ? Math.round((cacheRead / (cacheRead + (response.usage?.input_tokens ?? 0))) * 100)
+            : 0;
+          const cacheWriteTokens = cacheCreation;
+          const cacheReadTokens = cacheRead;
           const fallbackUsed = currentModel !== model;
           const costUsd = recordUsageCost(currentModel, usage);
 
@@ -226,7 +231,7 @@ export async function executeAgentRun({
               "\n"
           );
 
-          recordTelemetry({
+          recordTelemetry(buildTelemetryRecord({
             agent,
             model: currentModel,
             status: "success",
@@ -234,13 +239,14 @@ export async function executeAgentRun({
             outputTokens: usage.output_tokens ?? 0,
             cacheWriteTokens,
             cacheReadTokens,
+            cacheHitRate,
             costUsd,
             durationMs,
             retries: totalRetries,
             fallbackModel: fallbackUsed ? currentModel : null,
             webSearch: webSearchEnabled,
             structuredExtracted: parsed.contractValid
-          });
+          }));
 
           return {
             markdown: parsed.markdown,
@@ -283,7 +289,7 @@ export async function executeAgentRun({
   } catch (error) {
     const durationMs = Date.now() - startTime;
     const finalError = error instanceof Error ? error : new Error(String(error));
-    recordTelemetry({
+    recordTelemetry(buildTelemetryRecord({
       agent,
       model,
       status: "failed",
@@ -291,6 +297,7 @@ export async function executeAgentRun({
       outputTokens: 0,
       cacheWriteTokens: 0,
       cacheReadTokens: 0,
+      cacheHitRate: 0,
       costUsd: 0,
       durationMs,
       retries: totalRetries,
@@ -298,7 +305,7 @@ export async function executeAgentRun({
       webSearch: webSearchEnabled,
       structuredExtracted: false,
       error: finalError.message
-    });
+    }));
     clearInterval(interval);
     process.stdout.write(chalk.red(` FAILED (${finalError.message})\n`));
     throw finalError;
@@ -342,29 +349,31 @@ async function createMessageWithTimeout(options: {
   const timeoutId = setTimeout(() => controller.abort(), options.timeoutMs);
 
   try {
-    return await client.messages.create(
+    const currentModel = options.model;
+    const maxTokens = options.maxTokens;
+    const systemPrompt = options.systemPrompt;
+    const userMessage = options.userMessage;
+    const webSearch = options.webSearchEnabled;
+
+    const response = await client.messages.create(
       {
-        model: options.model,
-        max_tokens: options.maxTokens,
+        model: currentModel,
+        max_tokens: maxTokens,
+        // Cache the system prompt — identical across turns/calls
         system: [
           {
             type: "text",
-            text: options.systemPrompt,
-            cache_control: { type: "ephemeral" }
+            text: systemPrompt,
+            cache_control: { type: "ephemeral" } // 5-min cache
           }
         ],
-        messages: [
-          {
-            role: "user",
-            content: options.userMessage
-          }
-        ],
-        ...(options.webSearchEnabled ? { tools: [WEB_SEARCH_TOOL] } : {})
+        messages: [{ role: "user", content: userMessage }],
+        ...(webSearch && { tools: [WEB_SEARCH_TOOL] })
       },
-      {
-        signal: controller.signal
-      }
+      { signal: controller.signal }
     );
+
+    return response;
   } finally {
     clearTimeout(timeoutId);
   }
@@ -510,29 +519,3 @@ function sleep(ms: number): Promise<void> {
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null && !Array.isArray(value);
 }
-
-## ADDITIONS 
-const response = await client.messages.create(
-  {
-    model: currentModel,
-    max_tokens: maxTokens,
-    // Cache the system prompt — identical across turns/calls
-    system: [
-      {
-        type: 'text',
-        text: systemPrompt,
-        cache_control: { type: 'ephemeral' },  // 5-min cache
-      },
-    ],
-    messages: [{ role: 'user', content: userMessage }],
-    ...(webSearch && { tools: [WEB_SEARCH_TOOL] }),
-  },
-  { signal: controller.signal }
-);
-
-// Track cache performance in telemetry
-const cacheCreation = response.usage?.cache_creation_input_tokens ?? 0;
-const cacheRead = response.usage?.cache_read_input_tokens ?? 0;
-const cacheHitRate = cacheRead > 0
-  ? Math.round((cacheRead / (cacheRead + (response.usage?.input_tokens ?? 0))) * 100)
-  : 0;

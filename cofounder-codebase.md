@@ -2926,42 +2926,6 @@ export async function runTechnicalCofounder(
 
 ---
 
-### File: `src/agents/architect.ts`
-
-```typescript
-import { runAgent, AgentResult } from '../lib/run-agent.js';
-import { ARCHITECT_SYSTEM_PROMPT } from '../prompts/agents.js';
-import { buildCanvasContext } from '../lib/context-builder.js';
-import type { Canvas } from '../canvas/schema.js';
-
-/**
- * The Architect — runs on Sonnet for technical research and estimation.
- *
- * Handles: competitor tech stack research, infrastructure cost modeling,
- * build sequence/timeline, integration research, stack specifics.
- *
- * Runs BEFORE the Technical Cofounder. Its report feeds into the
- * Technical Cofounder's context for judgment calls.
- */
-export async function runArchitect(
-  brief: string,
-  canvas: Canvas
-): Promise<AgentResult> {
-  const canvasContext = buildCanvasContext(canvas, 'architect');
-
-  return runAgent({
-    systemPrompt: ARCHITECT_SYSTEM_PROMPT,
-    userMessage: `<brief>${brief}</brief>\n\n<canvas>${canvasContext}</canvas>`,
-    agentName: 'architect',
-    model: 'claude-sonnet-4-6',
-    maxTokens: 5000,
-    webSearch: true, // Active research — BuiltWith, job postings, etc.
-  });
-}
-```
-
----
-
 ### Modification: `src/orchestrator.ts` — Model Routing
 
 ```typescript
@@ -3026,43 +2990,6 @@ canvas.build = {
 };
 ```
 
----
-
-### Export Agent - Final Sprint Export Path
-
-> Sprint note: The active Export Agent handles final brief generation only. Pattern extraction and a knowledge base remain deferred from sprint scope and are not part of the shipping export path.
-
-Update `src/agents/export-agent.ts`:
-
-```typescript
-import { runAgent, AgentResult } from '../lib/run-agent.js';
-import { EXPORT_AGENT_SYSTEM_PROMPT } from '../prompts/agents.js';
-import * as fs from 'fs';
-import * as path from 'path';
-import type { Canvas } from '../canvas/schema.js';
-
-/**
- * The Export Agent - single Sonnet call that produces the final markdown brief:
- * 1. A complete structured founder-facing brief (formatted to the research template)
- * Cost: ~$0.06 (one Sonnet call, ~5K input, ~10K output)
- */
-export async function runExportAgent(
-  canvas: Canvas
-): Promise<{ markdown: string; structured: Record<string, unknown> }> {
-  const result = await runAgent({
-    systemPrompt: EXPORT_AGENT_SYSTEM_PROMPT,
-    brief: 'Produce the final founder-facing export from the current canvas.',
-    canvas,
-    agent: 'export-agent',
-    model: 'claude-sonnet-4-6',
-    maxTokens: 14000
-  });
-  return {
-    markdown: result.markdown,
-    structured: result.structured,
-  };
-}
-```
 
 ---
 
