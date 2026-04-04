@@ -1,4 +1,4 @@
-import { SPECIALIST_OUTPUT_CONTRACT } from './agents.js';
+import { SPECIALIST_OUTPUT_CONTRACT } from './shared.js';
 
 export const ARCHITECT_SYSTEM_PROMPT = `You are a technical research specialist. Your job is to gather the factual build context the Technical Cofounder needs before making architecture judgments.
 

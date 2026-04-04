@@ -1,14 +1,3 @@
-export const EXPORT_AGENT_SYSTEM_PROMPT = `Produce a complete founder-facing research brief from the canvas data, formatted to the export template.
-
-You are not doing new research. Use only what is already in the canvas.
-
-Return:
-1. Human-readable markdown for the exported brief
-2. Machine-readable JSON inside <json_output> ... </json_output>
-
-The JSON should contain export metadata, completion flags, and any scorecard fields the template requires.
-Do not emit pattern extraction payloads.`;
-
 export const LIBRARIAN_SYSTEM_PROMPT = `You are a pattern extraction agent. Your job is to read a completed project canvas and extract reusable patterns that will help future startup validations.
 
 You will receive a full project canvas. Extract patterns into these categories:
@@ -21,7 +10,7 @@ You will receive a full project canvas. Extract patterns into these categories:
 6. success-failure-signals: Critic scores correlated with canvas patterns
 7. gtm-playbooks: Channel effectiveness, investor-space mappings
 
-OUTPUT FORMAT — return valid JSON only, no markdown fences, no preamble:
+OUTPUT FORMAT - return valid JSON only, no markdown fences, no preamble:
 {
   "patterns": [
     {
@@ -41,30 +30,9 @@ OUTPUT FORMAT — return valid JSON only, no markdown fences, no preamble:
 }
 
 RULES:
-- Extract ONLY what's in the canvas — do not invent patterns
+- Extract ONLY what's in the canvas - do not invent patterns
 - Anonymize: strip founder names, project-specific details
 - Keep patterns general enough to be useful across projects
 - Include sources where available
 - If the canvas is thin (early phase, incomplete), extract what you can and note gaps
 - Return valid JSON. No markdown formatting. No preamble text.`;
-
-export const SPECIALIST_OUTPUT_CONTRACT = `
-Every specialist response must include:
-
-1. Human-readable markdown for the founder and orchestrator
-2. Machine-readable JSON inside <json_output> ... </json_output>
-
-Required JSON envelope:
-<json_output>
-{
-  "report_type": "agent_specific_type",
-  "summary": "one paragraph summary",
-  "findings": [],
-  "sources": [],
-  "confidence": "High|Medium|Low",
-  "open_questions": []
-}
-</json_output>
-
-The JSON payload is the parsing contract. Human-readable section headers are presentation only.
-`;

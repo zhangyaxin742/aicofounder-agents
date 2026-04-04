@@ -1,79 +1,89 @@
+import {
+  createVerificationMetadata,
+  type Canvas,
+  type VerificationMetadata,
+  type VerificationStatus
+} from '../canvas/schema.js';
 import { runAgent } from '../lib/run-agent.js';
-import { VERIFIER_SYSTEM_PROMPT } from '../prompts/agents.js';
+import { VERIFIER_SYSTEM_PROMPT } from '../prompts/verifier.js';
 
-export interface VerificationResult {
-  report: string;
-  risk: 'Low' | 'Medium' | 'High';
-  flaggedClaims: string[];
-  recommendation: 'Pass' | 'Pass with warnings' | 'Needs re-research on specific items';
+type SourceAgent =
+  | 'scout'
+  | 'analyst'
+  | 'sizer'
+  | 'icp'
+  | 'architect'
+  | 'technical-cofounder'
+  | 'gtm'
+  | 'critic';
+
+interface RunVerifierOptions {
+  sourceAgent: SourceAgent;
+  markdown: string;
+  structured: Record<string, unknown>;
+  canvas: Canvas;
 }
 
-/**
- * Runs a lightweight fact-check audit on a single agent report.
- * Uses Haiku for cost efficiency (~$0.003 per call).
- * Does NOT re-search — only audits what's in front of it.
- */
-export async function runVerifier(
-  report: string,
-  agentName: string
-): Promise<VerificationResult> {
-  const brief = [
-    `Audit the following ${agentName} report for unsourced claims,`,
-    `fabricated data, and hallucination risk. Return your assessment`,
-    `in the exact VERIFICATION REPORT format specified in your instructions.`,
-  ].join(' ');
-
-  const raw = await runAgent('verifier', {
-    brief,
-    context: report, // Single report only — NOT full canvas
+export async function runVerifier({
+  sourceAgent,
+  markdown,
+  structured,
+  canvas
+}: RunVerifierOptions): Promise<VerificationMetadata> {
+  const result = await runAgent({
+    agent: 'verifier',
+    reportType: 'verification',
     systemPrompt: VERIFIER_SYSTEM_PROMPT,
+    canvas,
     model: 'claude-haiku-4-5-20251001',
-    maxTokens: 1500,
+    maxTokens: 2_000,
+    requireStructuredOutput: true,
+    task: [
+      `Audit the ${sourceAgent} report for unsupported specificity, fabricated-looking claims, and source hygiene.`,
+      'Use the provided markdown and structured payload as the object of review. Do not do fresh research.',
+      '',
+      `<source_agent>${sourceAgent}</source_agent>`,
+      '',
+      '<report_markdown>',
+      markdown,
+      '</report_markdown>',
+      '',
+      '<report_structured>',
+      JSON.stringify(structured, null, 2),
+      '</report_structured>'
+    ].join('\n')
   });
 
-  // Parse the structured output
-  return parseVerifierOutput(raw, agentName);
+  return toVerificationMetadata(result.structured);
 }
 
-/**
- * Parse the Verifier's structured text output into a typed result.
- * Gracefully degrades if parsing fails — defaults to "Pass with warnings".
- */
-function parseVerifierOutput(raw: string, agentName: string): VerificationResult {
-  try {
-    // Extract fabrication risk level
-    const riskMatch = raw.match(/FABRICATION RISK:\s*(Low|Medium|High)/i);
-    const risk = (riskMatch?.[1] as 'Low' | 'Medium' | 'High') ?? 'Medium';
+function toVerificationMetadata(structured: Record<string, unknown>): VerificationMetadata {
+  const status = isVerificationStatus(structured.status)
+    ? structured.status
+    : 'pass_with_warnings';
 
-    // Extract recommendation
-    const recMatch = raw.match(
-      /RECOMMENDATION:\s*(Pass with warnings|Pass|Needs re-research on specific items)/i
-    );
-    const recommendation =
-      (recMatch?.[1] as VerificationResult['recommendation']) ?? 'Pass with warnings';
+  return createVerificationMetadata({
+    status,
+    issues: toStringArray(structured.issues),
+    source_count: toSourceCount(structured),
+    hallucination_markers: toStringArray(structured.hallucination_markers)
+  });
+}
 
-    // Extract flagged claims
-    const flaggedClaims: string[] = [];
-    const flagSection = raw.match(/FLAGS[\s\S]*?(?=FABRICATION RISK|$)/i);
-    if (flagSection) {
-      const lines = flagSection[0].split('\n');
-      for (const line of lines) {
-        const claimMatch = line.match(/^\d+\.\s*(.+)/);
-        if (claimMatch) {
-          flaggedClaims.push(claimMatch[1].trim());
-        }
-      }
-    }
+function isVerificationStatus(value: unknown): value is VerificationStatus {
+  return value === 'pass' || value === 'pass_with_warnings' || value === 'needs_rerun';
+}
 
-    return { report: raw, risk, flaggedClaims, recommendation };
-  } catch {
-    // If parsing fails, return a safe default
-    console.warn(`[Verifier] Failed to parse output for ${agentName}, defaulting to Medium risk`);
-    return {
-      report: raw,
-      risk: 'Medium',
-      flaggedClaims: ['Verifier output could not be parsed — manual review recommended'],
-      recommendation: 'Pass with warnings',
-    };
+function toStringArray(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((item): item is string => typeof item === 'string' && item.trim().length > 0)
+    : [];
+}
+
+function toSourceCount(structured: Record<string, unknown>): number {
+  if (typeof structured.source_count === 'number' && Number.isFinite(structured.source_count)) {
+    return Math.max(0, Math.trunc(structured.source_count));
   }
+
+  return toStringArray(structured.sources).length;
 }

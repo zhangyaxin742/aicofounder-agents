@@ -1,6 +1,8 @@
 import chalk from 'chalk';
 import { runAgent } from './run-agent.js';
-import { SCOUT_SYSTEM_PROMPT, ANALYST_SYSTEM_PROMPT, SIZER_SYSTEM_PROMPT } from '../prompts/agents.js';
+import { SCOUT_SYSTEM_PROMPT } from '../prompts/scout.js';
+import { ANALYST_SYSTEM_PROMPT } from '../prompts/analyst.js';
+import { SIZER_SYSTEM_PROMPT } from '../prompts/sizer.js';
 import type { Canvas } from '../canvas/schema.js';
 import { runVerifier } from '../agents/verifier.js';
 import { summarizeReport } from './summarize.js';

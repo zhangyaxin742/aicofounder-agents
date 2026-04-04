@@ -2,13 +2,11 @@ import Anthropic from '@anthropic-ai/sdk';
 import chalk from 'chalk';
 import type { Canvas } from './canvas/schema.js';
 import { ORCHESTRATOR_SYSTEM_PROMPT } from './prompts/orchestrator.js';
-import {
-  ICP_SYSTEM_PROMPT,
-  ARCHITECT_SYSTEM_PROMPT,
-  TECHNICAL_COFOUNDER_SYSTEM_PROMPT,
-  GTM_SYSTEM_PROMPT,
-  CRITIC_SYSTEM_PROMPT,
-} from './prompts/agents.js';
+import { ICP_SYSTEM_PROMPT } from './prompts/icp.js';
+import { ARCHITECT_SYSTEM_PROMPT } from './prompts/architect.js';
+import { TECHNICAL_COFOUNDER_SYSTEM_PROMPT } from './prompts/technical-cofounder.js';
+import { GTM_SYSTEM_PROMPT } from './prompts/gtm.js';
+import { CRITIC_SYSTEM_PROMPT } from './prompts/critic.js';
 import { runResearchPhase } from './lib/fan-out.js';
 import { runAgent } from './lib/run-agent.js';
 import { runVerifier } from './agents/verifier.js';

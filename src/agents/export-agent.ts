@@ -1,10 +1,6 @@
-import { runAgent, AgentResult } from '../lib/run-agent.js';
-import { EXPORT_AGENT_SYSTEM_PROMPT } from '../prompts/agents.js';
-import * as fs from 'fs';
-import * as path from 'path';
+import { runAgent } from '../lib/run-agent.js';
+import { EXPORT_AGENT_SYSTEM_PROMPT } from '../prompts/export-agent.js';
 import type { Canvas } from '../canvas/schema.js';
-
-
 export async function runExportAgent(
   canvas: Canvas
 ): Promise<{ markdown: string; structured: Record<string, unknown> }> {
