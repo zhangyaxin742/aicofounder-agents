@@ -51,7 +51,7 @@ RULES:
 
 ## ADDITIONS 
 
-const SPECIALIST_OUTPUT_CONTRACT = `
+export const SPECIALIST_OUTPUT_CONTRACT = `
 Every specialist response must include:
 
 1. Human-readable markdown for the founder and orchestrator
