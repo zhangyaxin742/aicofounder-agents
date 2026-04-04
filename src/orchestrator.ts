@@ -10,7 +10,9 @@ import { CRITIC_SYSTEM_PROMPT } from './prompts/critic.js';
 import { runResearchPhase } from './lib/fan-out.js';
 import { runAgent } from './lib/run-agent.js';
 import { runVerifier } from './agents/verifier.js';
-import { summarizeReport } from './lib/summarize.js';
+import { loadOrCreateCanvas } from './canvas/read.js';
+import { saveCanvas } from './canvas/write.js';
+import { exportBrief } from './lib/export.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -162,22 +164,16 @@ async function verifyAndStore(
 ) {
   const verification = await runVerifier({
     sourceAgent,
-    markdown: result.markdown,
+    markdown: result.raw_markdown,
     structured: result.structured,
     canvas,
   });
 
-  const summary = await summarizeReport({
-    agent: sourceAgent,
-    structured: result.structured,
-    verification,
-  });
-
   return {
-    raw_markdown: result.markdown,
+    raw_markdown: result.raw_markdown,
     structured: result.structured,
     verification,
-    summary,
+    summary: result.summary,
     timestamp: new Date().toISOString(),
   };
 }
@@ -210,9 +206,10 @@ async function handleTool(
       console.log(chalk.yellow('\n  👤 Launching ICP Whisperer...\n'));
       const result = await runAgent({
         agent: 'icp',
+        reportType: 'icp',
         systemPrompt: ICP_SYSTEM_PROMPT,
-        brief,
         canvas,
+        task: brief,
       });
       updatedCanvas.icp = {
         report: await verifyAndStore('icp', result, updatedCanvas),
@@ -227,16 +224,18 @@ async function handleTool(
 
       const architect = await runAgent({
         agent: 'architect',
+        reportType: 'architect',
         systemPrompt: ARCHITECT_SYSTEM_PROMPT,
-        brief,
         canvas,
+        task: brief,
       });
 
       const technicalCofounder = await runAgent({
         agent: 'technical-cofounder',
+        reportType: 'technical_cofounder',
         systemPrompt: TECHNICAL_COFOUNDER_SYSTEM_PROMPT,
-        brief,
         canvas,
+        task: brief,
       });
 
       updatedCanvas.build = {
@@ -252,9 +251,10 @@ async function handleTool(
       console.log(chalk.yellow('\n  🚀 Launching GTM Specialist...\n'));
       const result = await runAgent({
         agent: 'gtm',
+        reportType: 'gtm',
         systemPrompt: GTM_SYSTEM_PROMPT,
-        brief,
         canvas,
+        task: brief,
       });
       updatedCanvas.gtm = {
         report: await verifyAndStore('gtm', result, updatedCanvas),
@@ -269,9 +269,10 @@ async function handleTool(
       const lens = toolInput.lens === 'legal-risk' ? 'legal-risk' : 'default';
       const result = await runAgent({
         agent: 'critic',
+        reportType: 'critic',
         systemPrompt: CRITIC_SYSTEM_PROMPT,
-        brief: `Lens: ${lens}\n\n${brief}`,
         canvas,
+        task: `Lens: ${lens}\n\n${brief}`,
       });
       updatedCanvas.critic.reports = [
         ...(updatedCanvas.critic.reports ?? []),
@@ -333,14 +334,14 @@ async function runOrchestratorTurn(
   canvas: Canvas
 ): Promise<{ response: string; updatedCanvas: Canvas }> {
 
-  const systemPrompt = buildOrchestratorPrompt(canvas);
+  const systemPrompt = ORCHESTRATOR_SYSTEM_PROMPT;
 
   // Phase-aware tool selection
   const isWarmup = canvas.project.phase === 'warmup';
 
   const tools = isWarmup
-    ? [UPDATE_CANVAS_TOOL]     // Only canvas update (to transition to intake)
-    : ORCHESTRATOR_TOOLS;       // Full tool suite
+    ? WARMUP_TOOLS
+    : ORCHESTRATOR_TOOLS;
 
   const response = await client.messages.create({
     model: 'claude-opus-4-6',
@@ -351,7 +352,111 @@ async function runOrchestratorTurn(
   });
 
 
-Notes:
+  let updatedCanvas = canvas;
+  const responseParts: string[] = [];
+
+  for (const block of response.content) {
+    if (block.type === 'text') {
+      const text = block.text.trim();
+      if (text) {
+        responseParts.push(text);
+      }
+      continue;
+    }
+
+    if (block.type === 'tool_use') {
+      const toolResult = await handleTool(
+        block.name,
+        typeof block.input === 'object' && block.input !== null
+          ? block.input as Record<string, unknown>
+          : {},
+        updatedCanvas
+      );
+      updatedCanvas = toolResult.updatedCanvas;
+      if (toolResult.output) {
+        responseParts.push(toolResult.output);
+      }
+    }
+  }
+
+  return {
+    response: responseParts.join('\n\n') || 'No response returned.',
+    updatedCanvas,
+  };
+}
+
+export class Orchestrator {
+  private canvas?: Canvas;
+  private history: Array<{ role: 'user' | 'assistant'; content: string }> = [];
+
+  constructor(private readonly projectRef: string) {}
+
+  async init(): Promise<{ created: boolean }> {
+    const session = await loadOrCreateCanvas(this.projectRef);
+    this.canvas = session.canvas;
+    return { created: session.created };
+  }
+
+  getProjectSummary(): { projectName: string; projectSlug: string; phase: Canvas['project']['phase'] } {
+    const canvas = this.requireCanvas();
+    return {
+      projectName: canvas.project.name,
+      projectSlug: canvas.project.slug,
+      phase: canvas.project.phase,
+    };
+  }
+
+  async handleInput(input: string): Promise<string> {
+    const canvas = this.requireCanvas();
+    const trimmed = input.trim();
+
+    if (trimmed === '/canvas') {
+      return JSON.stringify(canvas, null, 2);
+    }
+
+    if (trimmed === '/export') {
+      const briefPath = await exportBrief(canvas, canvas.project.slug);
+      return `Brief exported -> ${briefPath}`;
+    }
+
+    if (trimmed === '/rerun') {
+      canvas.project.phase = 'warmup';
+      canvas.research = {
+        reports: {},
+        failures: [],
+      };
+      await this.save();
+      return 'Research phase reset. The next run_research_phase call will re-run all three agents.';
+    }
+
+    this.history.push({ role: 'user', content: trimmed });
+    const { response, updatedCanvas } = await runOrchestratorTurn(this.history, canvas);
+    this.canvas = updatedCanvas;
+    this.history.push({ role: 'assistant', content: response });
+
+    if (this.history.length > 40) {
+      this.history.splice(0, this.history.length - 40);
+    }
+
+    await this.save();
+    return response;
+  }
+
+  async save(): Promise<void> {
+    const canvas = this.requireCanvas();
+    await saveCanvas(canvas.project.slug, canvas);
+  }
+
+  private requireCanvas(): Canvas {
+    if (!this.canvas) {
+      throw new Error('Orchestrator has not been initialized.');
+    }
+
+    return this.canvas;
+  }
+}
+
+/* Notes:
 - `warmup` is tool-limited and cannot trigger research fan-out.
 - `update_canvas` is the only warmup tool and is used to move `warmup -> intake`.
 - build planning is Architect first, then Technical Cofounder.
@@ -544,3 +649,4 @@ main().catch((err) => {
   console.error(chalk.red('\nFatal error:'), err);
   process.exit(1);
 });
+*/

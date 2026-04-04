@@ -5,7 +5,6 @@ import { ANALYST_SYSTEM_PROMPT } from '../prompts/analyst.js';
 import { SIZER_SYSTEM_PROMPT } from '../prompts/sizer.js';
 import type { Canvas } from '../canvas/schema.js';
 import { runVerifier } from '../agents/verifier.js';
-import { summarizeReport } from './summarize.js';
 
 export async function runResearchPhase(brief: string, canvas: Canvas): Promise<Canvas> {
   console.log(chalk.yellow('\n  Launching Scout, Analyst, and Sizer in parallel...\n'));
@@ -13,21 +12,24 @@ export async function runResearchPhase(brief: string, canvas: Canvas): Promise<C
   const settled = await Promise.allSettled([
     runAgent({
       agent: 'scout',
+      reportType: 'market_scout',
       systemPrompt: SCOUT_SYSTEM_PROMPT,
-      brief,
       canvas,
+      task: brief,
     }),
     runAgent({
       agent: 'analyst',
+      reportType: 'competitor_analyst',
       systemPrompt: ANALYST_SYSTEM_PROMPT,
-      brief,
       canvas,
+      task: brief,
     }),
     runAgent({
       agent: 'sizer',
+      reportType: 'market_sizer',
       systemPrompt: SIZER_SYSTEM_PROMPT,
-      brief,
       canvas,
+      task: brief,
     }),
   ]);
 
@@ -50,22 +52,16 @@ export async function runResearchPhase(brief: string, canvas: Canvas): Promise<C
 
     const verification = await runVerifier({
       sourceAgent: reportName,
-      markdown: result.value.markdown,
+      markdown: result.value.raw_markdown,
       structured: result.value.structured,
       canvas,
     });
 
-    const summary = await summarizeReport({
-      agent: reportName,
-      structured: result.value.structured,
-      verification,
-    });
-
     canvas.research.reports[reportName] = {
-      raw_markdown: result.value.markdown,
+      raw_markdown: result.value.raw_markdown,
       structured: result.value.structured,
       verification,
-      summary,
+      summary: result.value.summary,
       timestamp: new Date().toISOString(),
     };
   }

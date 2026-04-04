@@ -5,15 +5,16 @@ export async function runExportAgent(
   canvas: Canvas
 ): Promise<{ markdown: string; structured: Record<string, unknown> }> {
   const result = await runAgent({
-    systemPrompt: EXPORT_AGENT_SYSTEM_PROMPT,
-    brief: 'Produce the final founder-facing export from the current canvas.',
-    canvas,
     agent: 'export-agent',
+    reportType: 'export',
+    systemPrompt: EXPORT_AGENT_SYSTEM_PROMPT,
+    canvas,
+    task: 'Produce the final founder-facing export from the current canvas.',
     model: 'claude-sonnet-4-6',
     maxTokens: 14000
   });
   return {
-    markdown: result.markdown,
+    markdown: result.raw_markdown,
     structured: result.structured,
   };
 }
