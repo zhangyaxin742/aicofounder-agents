@@ -3,6 +3,7 @@ import chalk from "chalk";
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stdout as output } from "node:process";
 import { Orchestrator } from "./orchestrator.js";
+import { printStage } from "./lib/loading.js";
 
 async function main(): Promise<void> {
   if (!process.env.ANTHROPIC_API_KEY) {
@@ -50,6 +51,8 @@ async function main(): Promise<void> {
 
     const response = await orchestrator.handleInput(line);
     console.log(response);
+    const { phase } = orchestrator.getProjectSummary();
+    printStage('Awaiting Input', `Current project phase: ${phase}.`);
   }
 
   rl.close();

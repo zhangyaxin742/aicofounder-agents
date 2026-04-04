@@ -1,6 +1,6 @@
 import chalk from 'chalk';
 import { runAgent } from './run-agent.js';
-import { markAgentDone, startParallelLoading, stopLoading } from './loading.js';
+import { markAgentDone, printDone, printFailed, printInfo, printStage, startParallelLoading, stopLoading } from './loading.js';
 import { SCOUT_SYSTEM_PROMPT } from '../prompts/scout.js';
 import { ANALYST_SYSTEM_PROMPT } from '../prompts/analyst.js';
 import { SIZER_SYSTEM_PROMPT } from '../prompts/sizer.js';
@@ -8,6 +8,7 @@ import type { Canvas } from '../canvas/schema.js';
 import { runVerifier } from '../agents/verifier.js';
 
 export async function runResearchPhase(brief: string, canvas: Canvas): Promise<Canvas> {
+  printStage('Research Running', 'Three agents are running in parallel: scout, analyst, and sizer.');
   console.log(chalk.yellow('\n  Launching Scout, Analyst, and Sizer in parallel...\n'));
 
   const reportNames: Array<'scout' | 'analyst' | 'sizer'> = ['scout', 'analyst', 'sizer'];
@@ -46,6 +47,7 @@ export async function runResearchPhase(brief: string, canvas: Canvas): Promise<C
   ));
 
   stopLoading();
+  printStage('Research Verification', 'Auditing each completed report for source hygiene and unsupported specificity.');
   canvas.research.reports ??= {};
   canvas.research.failures ??= [];
 
@@ -53,6 +55,7 @@ export async function runResearchPhase(brief: string, canvas: Canvas): Promise<C
     const reportName = reportNames[index];
 
     if (result.status === 'rejected') {
+      printFailed(reportName, String(result.reason));
       console.error(chalk.red(`  ✗ ${reportName} failed: ${String(result.reason)}`));
       canvas.research.failures.push({
         phase: 'research',
@@ -69,6 +72,9 @@ export async function runResearchPhase(brief: string, canvas: Canvas): Promise<C
       canvas,
     });
 
+    printDone(reportName, `report captured; verification: ${verification.status}`);
+    printInfo('Research Summary', `${reportName} stored with ${verification.source_count} sources counted by verifier.`);
+
     canvas.research.reports[reportName] = {
       raw_markdown: result.value.raw_markdown,
       structured: result.value.structured,
@@ -83,8 +89,10 @@ export async function runResearchPhase(brief: string, canvas: Canvas): Promise<C
     throw new Error('All three research agents failed. Check API key and network, then retry.');
   }
   if (failCount > 0) {
+    printStage('Research Complete', `${reportNames.length - failCount} reports stored, ${failCount} agent failure(s).`);
     console.log(chalk.yellow(`\n  ⚠ Research phase complete with ${failCount} agent failure(s).\n`));
   } else {
+    printStage('Research Complete', 'All three reports were stored and verified.');
     console.log(chalk.green('\n  ✓ Research phase complete\n'));
   }
 

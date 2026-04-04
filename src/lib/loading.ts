@@ -338,3 +338,22 @@ export function printFailed(agent: string, reason: string): void {
 
   console.log(`  ${ansi.red("FAIL")} ${ansi.bold(label)}  ${ansi.dim(reason)}`);
 }
+
+export function printStage(title: string, detail?: string): void {
+  const suffix = detail ? `  ${detail}` : "";
+  if (!isInteractiveTerminal()) {
+    console.log(`\n[stage] ${title}${suffix}\n`);
+    return;
+  }
+
+  console.log(`\n  ${ansi.bold(ansi.cyan("STAGE"))} ${ansi.bold(title)}${detail ? `  ${ansi.dim(detail)}` : ""}\n`);
+}
+
+export function printInfo(label: string, detail: string): void {
+  if (!isInteractiveTerminal()) {
+    console.log(`  INFO ${label}  ${detail}`);
+    return;
+  }
+
+  console.log(`  ${ansi.cyan("INFO")} ${ansi.bold(label)}  ${ansi.dim(detail)}`);
+}

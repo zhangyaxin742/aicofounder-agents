@@ -13,7 +13,7 @@ import { runVerifier } from './agents/verifier.js';
 import { loadOrCreateCanvas } from './canvas/read.js';
 import { saveCanvas } from './canvas/write.js';
 import { exportBrief } from './lib/export.js';
-import { startLoading, stopLoading } from './lib/loading.js';
+import { printDone, printInfo, printStage, startLoading, stopLoading } from './lib/loading.js';
 
 const client = new Anthropic({ apiKey: process.env.ANTHROPIC_API_KEY });
 
@@ -157,6 +157,51 @@ function buildOrchestratorSystemPrompt(canvas: Canvas): string {
   );
 }
 
+function describePhase(phase: Canvas['project']['phase']): { title: string; detail: string } {
+  switch (phase) {
+    case 'warmup':
+      return {
+        title: 'Warmup',
+        detail: 'Clarifying the idea and deciding whether it is research-ready.'
+      };
+    case 'intake':
+      return {
+        title: 'Intake',
+        detail: 'The idea is sharp enough; the next step is structured intake and research launch.'
+      };
+    case 'research':
+      return {
+        title: 'Research',
+        detail: 'Market grounding exists; the next step is synthesis or deeper analysis.'
+      };
+    case 'icp':
+      return {
+        title: 'ICP',
+        detail: 'Customer profile work is active or complete; next comes product and GTM judgment.'
+      };
+    case 'build':
+      return {
+        title: 'Build',
+        detail: 'Technical planning is active or complete; next comes GTM and red-team review.'
+      };
+    case 'gtm':
+      return {
+        title: 'GTM',
+        detail: 'Go-to-market planning is active or complete; next comes critic review or export.'
+      };
+    case 'critic':
+      return {
+        title: 'Critic',
+        detail: 'The project is being pressure-tested for weak assumptions and hidden risks.'
+      };
+    default:
+      return {
+        title: 'Orchestration',
+        detail: 'Evaluating the current project state and deciding what to do next.'
+      };
+  }
+}
+
 function selectOrchestratorModel(canvas: Canvas): string {
   if (canvas.project.phase === 'warmup') return 'claude-opus-4-6';
   if (canvas.project.phase === 'research') return 'claude-opus-4-6';
@@ -205,12 +250,15 @@ async function handleTool(
         };
       }
 
+      printStage('Research Launching', 'Dispatching Market Scout, Competitor Analyst, and Market Sizer.');
       updatedCanvas = await runResearchPhase(brief, updatedCanvas);
       updatedCanvas.project.phase = 'research';
+      printDone('orchestrator', 'Research outputs stored in canvas; phase set to research.');
       return { output: 'Research phase complete.', updatedCanvas };
     }
 
     case 'run_icp_analysis': {
+      printStage('ICP Launching', 'Starting ICP Whisperer for personas, urgency, and WTP signals.');
       console.log(chalk.yellow('\n  👤 Launching ICP Whisperer...\n'));
       const result = await runAgent({
         agent: 'icp',
@@ -224,10 +272,12 @@ async function handleTool(
         last_updated: new Date().toISOString(),
       };
       updatedCanvas.project.phase = 'icp';
+      printDone('orchestrator', 'ICP report stored in canvas; phase set to icp.');
       return { output: 'ICP analysis complete.', updatedCanvas };
     }
 
     case 'run_build_phase': {
+      printStage('Build Planning', 'Starting Architect first, then Technical Cofounder.');
       console.log(chalk.yellow('\n  ⚙️  Launching Architect, then Technical Cofounder...\n'));
 
       const architect = await runAgent({
@@ -252,10 +302,12 @@ async function handleTool(
         last_updated: new Date().toISOString(),
       };
       updatedCanvas.project.phase = 'build';
+      printDone('orchestrator', 'Build reports stored in canvas; phase set to build.');
       return { output: 'Build phase complete.', updatedCanvas };
     }
 
     case 'run_gtm_planning': {
+      printStage('GTM Launching', 'Starting GTM Specialist for launch plan and monetization framing.');
       console.log(chalk.yellow('\n  🚀 Launching GTM Specialist...\n'));
       const result = await runAgent({
         agent: 'gtm',
@@ -269,10 +321,12 @@ async function handleTool(
         last_updated: new Date().toISOString(),
       };
       updatedCanvas.project.phase = 'gtm';
+      printDone('orchestrator', 'GTM report stored in canvas; phase set to gtm.');
       return { output: 'GTM planning complete.', updatedCanvas };
     }
 
     case 'run_critic': {
+      printStage('Critic Launching', 'Starting adversarial review to pressure-test the current thesis.');
       console.log(chalk.yellow('\n  🔥 Launching Critic...\n'));
       const lens = toolInput.lens === 'legal-risk' ? 'legal-risk' : 'default';
       const result = await runAgent({
@@ -288,11 +342,13 @@ async function handleTool(
       ];
       updatedCanvas.critic.last_updated = new Date().toISOString();
       updatedCanvas.project.phase = 'critic';
+      printDone('orchestrator', `Critic report stored in canvas; phase set to critic (${lens}).`);
       return { output: `Critic complete (${lens}).`, updatedCanvas };
     }
 
     case 'update_canvas': {
       if (toolInput.phase_transition === 'intake') {
+        printStage('Writing Intake', 'Saving the structured idea brief into the canvas.');
         updatedCanvas.project.phase = 'intake';
         updatedCanvas.idea = {
           summary: String(toolInput.idea_summary ?? ''),
@@ -309,6 +365,7 @@ async function handleTool(
             : [],
           last_updated: new Date().toISOString(),
         };
+        printDone('orchestrator', 'Intake saved to canvas; phase set to intake.');
         return {
           output: 'Idea sharpened and project moved from warmup to intake.',
           updatedCanvas,
@@ -317,6 +374,7 @@ async function handleTool(
 
       if (toolInput.section && toolInput.content) {
         const section = String(toolInput.section) as 'research' | 'icp' | 'build' | 'gtm' | 'decisions' | 'risks';
+        printStage('Updating Canvas', `Merging new structured data into the ${section} section.`);
         updatedCanvas[section] = {
           ...(typeof updatedCanvas[section] === 'object' && updatedCanvas[section] !== null
             ? updatedCanvas[section] as object
@@ -324,6 +382,7 @@ async function handleTool(
           ...(toolInput.content as object),
           last_updated: new Date().toISOString(),
         } as never;
+        printDone('orchestrator', `Canvas section "${section}" updated.`);
         return { output: `Canvas section "${section}" updated.`, updatedCanvas };
       }
 
@@ -340,7 +399,13 @@ async function handleTool(
 async function runOrchestratorTurn(
   history: Array<{ role: 'user' | 'assistant'; content: string }>,
   canvas: Canvas
-): Promise<{ response: string; updatedCanvas: Canvas }> {
+): Promise<{
+  response: string;
+  updatedCanvas: Canvas;
+  toolsRun: string[];
+  startingPhase: Canvas['project']['phase'];
+  endingPhase: Canvas['project']['phase'];
+}> {
 
   const systemPrompt = buildOrchestratorSystemPrompt(canvas);
 
@@ -365,6 +430,7 @@ async function runOrchestratorTurn(
 
   let updatedCanvas = canvas;
   const responseParts: string[] = [];
+  const toolsRun: string[] = [];
 
   for (const block of response.content) {
     if (block.type === 'text') {
@@ -376,6 +442,8 @@ async function runOrchestratorTurn(
     }
 
     if (block.type === 'tool_use') {
+      toolsRun.push(block.name);
+      printInfo('Tool Call', `${block.name} requested by orchestrator.`);
       const toolResult = await handleTool(
         block.name,
         typeof block.input === 'object' && block.input !== null
@@ -393,6 +461,9 @@ async function runOrchestratorTurn(
   return {
     response: responseParts.join('\n\n') || 'No response returned.',
     updatedCanvas,
+    toolsRun,
+    startingPhase: canvas.project.phase,
+    endingPhase: updatedCanvas.project.phase,
   };
 }
 
@@ -422,26 +493,33 @@ export class Orchestrator {
     const trimmed = input.trim();
 
     if (trimmed === '/canvas') {
+      printStage('Canvas', 'Printing the current project canvas JSON.');
       return JSON.stringify(canvas, null, 2);
     }
 
     if (trimmed === '/export') {
+      printStage('Exporting Brief', 'Assembling the founder-facing markdown brief from canvas state.');
       const briefPath = await exportBrief(canvas, canvas.project.slug);
+      printDone('orchestrator', `Brief exported to ${briefPath}`);
       return `Brief exported -> ${briefPath}`;
     }
 
     if (trimmed === '/rerun') {
+      printStage('Research Reset', 'Clearing prior research outputs and moving the project back to warmup.');
       canvas.project.phase = 'warmup';
       canvas.research = {
         reports: {},
         failures: [],
       };
       await this.save();
+      printDone('orchestrator', 'Research outputs cleared; the next research run will start fresh.');
       return 'Research phase reset. The next run_research_phase call will re-run all three agents.';
     }
 
+    const phaseDescription = describePhase(canvas.project.phase);
+    printStage(phaseDescription.title, phaseDescription.detail);
     this.history.push({ role: 'user', content: trimmed });
-    const { response, updatedCanvas } = await runOrchestratorTurn(this.history, canvas);
+    const { response, updatedCanvas, toolsRun, startingPhase, endingPhase } = await runOrchestratorTurn(this.history, canvas);
     this.canvas = updatedCanvas;
     this.history.push({ role: 'assistant', content: response });
 
@@ -450,6 +528,10 @@ export class Orchestrator {
     }
 
     await this.save();
+    printStage(
+      'Turn Summary',
+      `Tools run: ${toolsRun.length > 0 ? toolsRun.join(', ') : 'none'} | phase: ${startingPhase} -> ${endingPhase}`
+    );
     return response;
   }
 
@@ -468,8 +550,8 @@ export class Orchestrator {
 }
 
 /* Notes:
-- `warmup` is tool-limited and cannot trigger research fan-out.
-- `update_canvas` is the only warmup tool and is used to move `warmup -> intake`.
+- `warmup` is tool-limited; it can write intake and, in the same turn, launch research once intake is set.
+- `update_canvas` is the warmup handoff into intake.
 - build planning is Architect first, then Technical Cofounder.
 - the legal path is a Critic lens parameter, not a standalone agent.
 - `/export` should invoke Export Agent through `src/lib/export.ts`.
