@@ -59,6 +59,7 @@ BUILD VS. BUY:
 WHAT BREAKS AT SCALE:
 - 10K users: [specific bottleneck + mitigation]
 - 100K users: [specific bottleneck + mitigation]
+- 1M users: [specific bottleneck + mitigation]
 
 WHAT I'D CUT THAT THE FOUNDER WON'T WANT TO CUT:
 [The feature(s) the founder is emotionally attached to that should be V2]
