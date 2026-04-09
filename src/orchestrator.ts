@@ -516,6 +516,80 @@ export class Orchestrator {
       return 'Research phase reset. The next run_research_phase call will re-run all three agents.';
     }
 
+    if (trimmed.startsWith('/rerun ')) {
+      const sub = trimmed.slice(7).trim();
+      const brief = canvas.idea.summary?.trim() || 'Re-run this phase using the current intake brief.';
+
+      if (sub === 'research') {
+        printStage('Research Re-run', 'Clearing prior research and re-running Scout, Analyst, and Sizer.');
+        canvas.research = { reports: {}, failures: [] };
+        await runResearchPhase(brief, canvas);
+        canvas.project.phase = 'research';
+        await this.save();
+        printDone('orchestrator', 'Research re-run complete; reports stored in canvas.');
+        return 'Research re-run complete.';
+      }
+
+      if (sub === 'icp') {
+        printStage('ICP Re-run', 'Clearing ICP report and re-running ICP Whisperer.');
+        canvas.icp = {};
+        const result = await runAgent({ agent: 'icp', reportType: 'icp', systemPrompt: ICP_SYSTEM_PROMPT, canvas, task: brief });
+        canvas.icp = { report: await verifyAndStore('icp', result, canvas), last_updated: new Date().toISOString() };
+        canvas.project.phase = 'icp';
+        await this.save();
+        printDone('orchestrator', 'ICP re-run complete; report stored in canvas.');
+        return 'ICP analysis re-run complete.';
+      }
+
+      if (sub === 'build') {
+        printStage('Build Re-run', 'Clearing build reports and re-running Architect then Technical Cofounder.');
+        canvas.build = {};
+        const architect = await runAgent({ agent: 'architect', reportType: 'architect', systemPrompt: ARCHITECT_SYSTEM_PROMPT, canvas, task: brief });
+        const tc = await runAgent({ agent: 'technical-cofounder', reportType: 'technical_cofounder', systemPrompt: TECHNICAL_COFOUNDER_SYSTEM_PROMPT, canvas, task: brief });
+        canvas.build = {
+          architect: await verifyAndStore('architect', architect, canvas),
+          technical_cofounder: await verifyAndStore('technical-cofounder', tc, canvas),
+          last_updated: new Date().toISOString(),
+        };
+        canvas.project.phase = 'build';
+        await this.save();
+        printDone('orchestrator', 'Build re-run complete; reports stored in canvas.');
+        return 'Build phase re-run complete.';
+      }
+
+      if (sub === 'gtm') {
+        printStage('GTM Re-run', 'Clearing GTM report and re-running GTM Specialist.');
+        canvas.gtm = {};
+        const result = await runAgent({ agent: 'gtm', reportType: 'gtm', systemPrompt: GTM_SYSTEM_PROMPT, canvas, task: brief });
+        canvas.gtm = { report: await verifyAndStore('gtm', result, canvas), last_updated: new Date().toISOString() };
+        canvas.project.phase = 'gtm';
+        await this.save();
+        printDone('orchestrator', 'GTM re-run complete; report stored in canvas.');
+        return 'GTM planning re-run complete.';
+      }
+
+      return `Unknown subcommand: /rerun ${sub}. Available: research, icp, build, gtm`;
+    }
+
+    if (trimmed === '/critic' || trimmed === '/critic legal') {
+      const lens = trimmed === '/critic legal' ? 'legal-risk' : 'default';
+      printStage('Critic Launching', 'Starting adversarial review to pressure-test the current thesis.');
+      const brief = canvas.idea.summary?.trim() || 'Pressure-test the current business thesis.';
+      const result = await runAgent({
+        agent: 'critic',
+        reportType: 'critic',
+        systemPrompt: CRITIC_SYSTEM_PROMPT,
+        canvas,
+        task: `Lens: ${lens}\n\n${brief}`,
+      });
+      canvas.critic.reports = [...(canvas.critic.reports ?? []), await verifyAndStore('critic', result, canvas)];
+      canvas.critic.last_updated = new Date().toISOString();
+      canvas.project.phase = 'critic';
+      await this.save();
+      printDone('orchestrator', `Critic report stored (${lens}).`);
+      return `Critic review complete (${lens}).`;
+    }
+
     const phaseDescription = describePhase(canvas.project.phase);
     printStage(phaseDescription.title, phaseDescription.detail);
     this.history.push({ role: 'user', content: trimmed });
